@@ -40,7 +40,7 @@ function restore(file) {
 }
 
 try {
-  // __dirname = <editor>/extensions/<publisher>.rtl-for-claude-code-x.y.z
+  // __dirname = <editor>/extensions/<publisher>.rtl-for-claude-vscode-x.y.z
   // so its parent is the editor's extensions/ folder.
   const extensionsDir = path.dirname(__dirname);
   const claudeDirs = fs

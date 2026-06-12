@@ -57,11 +57,16 @@
 
 **VS Code — Claude Code**
 
-```bash
-cd vscode-extension && bash apply-rtl.sh
-```
+از **Marketplace**: عبارتِ **«RTL for Claude»** را جستجو کن (یا
+[صفحه‌اش](https://marketplace.visualstudio.com/items?itemName=mahdigh99.rtl-for-claude)
+را باز کن)، روی **Install** بزن، بعد **Developer: Reload Window** را اجرا کن.
 
-بعدش دستور **Developer: Reload Window** را اجرا کن. می‌خواهی بعد از هر آپدیت Claude هم خودش پابرجا بماند؟ افزونه‌ی همراه را نصب کن؛ راهنمایش هم اینجاست: [vscode-extension/README.md](vscode-extension/README.md).
+یا با فایلِ **`.vsix`**: فایلِ `rtl-for-claude-vscode-*.vsix` را از
+[Releases](https://github.com/mahdigh99/rtl-for-claude/releases) دانلود کن و توی VS Code
+**Extensions ← `…` ← Install from VSIX…** را بزن.
+
+بدونِ نصب: `bash vscode-extension/apply-rtl.sh`. راهنمای کامل:
+[vscode-extension/README.md](vscode-extension/README.md).
 
 ## 🎛️ به سلیقه‌ی خودت
 

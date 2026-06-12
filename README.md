@@ -54,11 +54,17 @@ Pick what you need — each part is its own self-contained download.
 2. Select `browser-extension/manifest.json`.
 
 **VS Code — Claude Code**
-```bash
-cd vscode-extension && bash apply-rtl.sh    # then run "Developer: Reload Window"
-```
-Want it to survive Claude updates on its own? Install the companion extension —
-guide in [vscode-extension/README.md](vscode-extension/README.md).
+
+From the **Marketplace** — search **"RTL for Claude"** (or open the
+[listing](https://marketplace.visualstudio.com/items?itemName=mahdigh99.rtl-for-claude)),
+click **Install**, then run **Developer: Reload Window**.
+
+Or install the **`.vsix`** — download `rtl-for-claude-vscode-*.vsix` from
+[Releases](https://github.com/mahdigh99/rtl-for-claude/releases) and run
+**Extensions → `…` → Install from VSIX…**.
+
+No-install alternative: `bash vscode-extension/apply-rtl.sh`. Full guide:
+[vscode-extension/README.md](vscode-extension/README.md).
 
 ## 🎛️ Make it yours
 

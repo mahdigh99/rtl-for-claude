@@ -1,5 +1,5 @@
 {
-  "name": "rtl-for-claude-code",
+  "name": "rtl-for-claude",
   "displayName": "RTL for Claude",
   "description": "Right-to-left text + the Vazirmatn font in the Claude Code chat — for Persian, Arabic, Urdu and every RTL language. Auto-applies and survives Claude updates.",
   "version": "1.0.0",

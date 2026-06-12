@@ -8,8 +8,8 @@
 in the Claude Code chat.** Automatic, per-paragraph right-to-left + the gorgeous
 **Vazirmatn** font. Your code and English stay exactly as they are.
 
-![Version](https://img.shields.io/visual-studio-marketplace/v/mahdigh99.rtl-for-claude-code)
-![Installs](https://img.shields.io/visual-studio-marketplace/i/mahdigh99.rtl-for-claude-code)
+![Version](https://img.shields.io/visual-studio-marketplace/v/mahdigh99.rtl-for-claude)
+![Installs](https://img.shields.io/visual-studio-marketplace/i/mahdigh99.rtl-for-claude)
 ![License](https://img.shields.io/badge/License-MIT-3b82f6)
 
 ## ✨ Features

@@ -57,11 +57,16 @@ Claude کے جواب کمال کے ہوتے ہیں، مگر اردو لکھتے 
 
 **VS Code — Claude Code**
 
-```bash
-cd vscode-extension && bash apply-rtl.sh
-```
+**Marketplace** سے: **«RTL for Claude»** سرچ کریں (یا
+[لسٹنگ](https://marketplace.visualstudio.com/items?itemName=mahdigh99.rtl-for-claude)
+کھولیں)، **Install** دبائیں، پھر **Developer: Reload Window** چلائیں۔
 
-اس کے بعد کمانڈ پیلٹ سے **Developer: Reload Window** چلا دیں۔ Claude کے اپڈیٹ ہونے کے بعد بھی یہ سیٹنگ خود بخود قائم رہے، اس کے لیے ساتھی ایکسٹینشن انسٹال کریں — پوری رہنمائی یہاں ہے: [vscode-extension/README.md](vscode-extension/README.md)۔
+یا **`.vsix`** سے: [Releases](https://github.com/mahdigh99/rtl-for-claude/releases) سے
+`rtl-for-claude-vscode-*.vsix` ڈاؤن لوڈ کریں اور VS Code میں
+**Extensions ← `…` ← Install from VSIX…** کریں۔
+
+بغیر انسٹال: `bash vscode-extension/apply-rtl.sh`۔ مکمل گائیڈ:
+[vscode-extension/README.md](vscode-extension/README.md)۔
 
 ## 🎛️ اپنی مرضی کے مطابق
 
