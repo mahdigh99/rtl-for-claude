@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RTL for Claude</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="hdr">
+      <h1>RTL for Claude</h1>
+      <label class="switch" title="On / off">
+        <input type="checkbox" id="enabled" />
+        <span class="slider"></span>
+      </label>
+    </header>
+
+    <section class="row">
+      <span>This site (<b id="host">—</b>)</span>
+      <label class="switch sm">
+        <input type="checkbox" id="siteEnabled" />
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <hr />
+
+    <section class="block">
+      <label class="lbl">Detection mode</label>
+      <div class="seg">
+        <button data-mode="ratio" class="seg-btn">Smart (ratio)</button>
+        <button data-mode="first-strong" class="seg-btn">First letter</button>
+      </div>
+      <p class="hint">“Smart” is better for RTL paragraphs full of English terms.</p>
+    </section>
+
+    <section class="block" id="thresholdWrap">
+      <label class="lbl">RTL sensitivity: <b id="thresholdVal">30%</b></label>
+      <input type="range" id="threshold" min="0.1" max="0.7" step="0.05" />
+      <p class="hint">Lower = flips to RTL more easily.</p>
+    </section>
+
+    <hr />
+
+    <section class="row">
+      <span>Pretty RTL font (Vazirmatn)</span>
+      <label class="switch sm">
+        <input type="checkbox" id="fontEnabled" />
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <section class="block">
+      <label class="lbl">Font</label>
+      <select id="fontFamily">
+        <option value='"Vazirmatn RTLX", "Vazirmatn", Tahoma, sans-serif'>Vazirmatn</option>
+        <option value='"Sahel", "Vazirmatn RTLX", Tahoma, sans-serif'>Sahel</option>
+        <option value='Tahoma, "Vazirmatn RTLX", sans-serif'>Tahoma (system)</option>
+        <option value='inherit'>Site's own font</option>
+      </select>
+    </section>
+
+    <section class="block">
+      <label class="lbl">Text size: <b id="scaleVal">100%</b></label>
+      <input type="range" id="fontScale" min="0.9" max="1.4" step="0.05" />
+    </section>
+
+    <section class="block">
+      <label class="lbl">Line spacing: <b id="lhVal">1.85</b></label>
+      <input type="range" id="lineHeight" min="1.4" max="2.4" step="0.05" />
+    </section>
+
+    <hr />
+
+    <section class="row">
+      <span>Apply to the compose box</span>
+      <label class="switch sm">
+        <input type="checkbox" id="applyToInput" />
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <section class="row">
+      <span>Direction toggle on each message</span>
+      <label class="switch sm">
+        <input type="checkbox" id="showToggles" />
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <footer class="ftr">
+      <button id="reprocess" class="ghost">Re-apply to page</button>
+      <button id="reset" class="ghost danger">Reset</button>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

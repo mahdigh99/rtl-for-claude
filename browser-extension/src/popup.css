@@ -1,0 +1,94 @@
+/* Load Vazirmatn for the popup itself (extension pages can use their own
+   resources directly, no web_accessible_resources needed). */
+@font-face {
+  font-family: "Vazirmatn RTLX";
+  src: url("../fonts/Vazirmatn-VariableFont_wght.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --bg: #1c1b22;
+  --fg: #ECECEC;
+  --muted: #9a98a6;
+  --accent: #d97757; /* Claude-ish clay */
+  --card: #26252e;
+  --line: #36343f;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #faf9f5;
+    --fg: #1f1e24;
+    --muted: #6b6975;
+    --card: #ffffff;
+    --line: #e7e5df;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  width: 320px;
+  margin: 0;
+  padding: 14px 14px 10px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Vazirmatn RTLX", "Vazirmatn", Tahoma, sans-serif;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.hdr { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.hdr h1 { font-size: 14px; margin: 0; line-height: 1.5; }
+
+hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
+
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.row b { color: var(--accent); }
+
+.block { margin: 10px 0; }
+.lbl { display: block; margin-bottom: 6px; color: var(--fg); }
+.lbl b { color: var(--accent); }
+.hint { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+
+select, input[type="range"] { width: 100%; }
+select {
+  background: var(--card); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px;
+  font-family: inherit;
+}
+input[type="range"] { accent-color: var(--accent); }
+
+/* segmented control */
+.seg { display: flex; gap: 6px; }
+.seg-btn {
+  flex: 1; padding: 7px 6px; border-radius: 8px; cursor: pointer;
+  background: var(--card); color: var(--muted);
+  border: 1px solid var(--line); font-family: inherit; font-size: 12px;
+}
+.seg-btn.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+/* switches */
+.switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: 0 0 auto; }
+.switch.sm { width: 36px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; inset: 0; cursor: pointer; background: var(--line);
+  border-radius: 24px; transition: .2s;
+}
+.slider::before {
+  content: ""; position: absolute; height: 18px; width: 18px; right: 3px; top: 3px;
+  background: #fff; border-radius: 50%; transition: .2s;
+}
+.switch.sm .slider::before { height: 14px; width: 14px; }
+input:checked + .slider { background: var(--accent); }
+input:checked + .slider::before { transform: translateX(-18px); }
+.switch.sm input:checked + .slider::before { transform: translateX(-16px); }
+
+.ftr { display: flex; gap: 8px; margin-top: 12px; }
+.ghost {
+  flex: 1; padding: 8px; border-radius: 8px; cursor: pointer;
+  background: transparent; color: var(--fg);
+  border: 1px solid var(--line); font-family: inherit; font-size: 12px;
+}
+.ghost:hover { border-color: var(--accent); }
+.ghost.danger:hover { border-color: #e5484d; color: #e5484d; }

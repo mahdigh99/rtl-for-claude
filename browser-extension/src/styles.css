@@ -1,0 +1,171 @@
+/* ============================================================================
+ * RTL for Claude — content stylesheet
+ *
+ * IMPORTANT: This file is injected via the manifest "content_scripts.css"
+ * array (NOT as a <style> element created by JS). That matters because a
+ * stylesheet injected this way is associated with the EXTENSION origin, so
+ * the @font-face below can load the bundled font from chrome-extension://
+ * (or moz-extension://) even when the page (e.g. claude.ai) ships a strict
+ * Content-Security-Policy with a restrictive font-src. A JS-injected <style>
+ * would be treated as page-origin and the font would be blocked.
+ * ========================================================================== */
+
+/* --- Bundled Persian font (Vazirmatn variable) --------------------------- */
+@font-face {
+  font-family: "Vazirmatn RTLX";
+  /* Variable woff2: the font-weight RANGE below signals it's variable; plain
+     format("woff2") is the most widely accepted syntax across Chrome/Firefox. */
+  src: url("../fonts/Vazirmatn-VariableFont_wght.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Optional second face fallback (static regular) in case the variable file
+   is unavailable on a given browser. Safe to keep — browser picks first that
+   loads. */
+@font-face {
+  font-family: "Vazirmatn RTLX";
+  src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+ * Direction. The JS engine adds these classes to text-bearing block elements
+ * it has classified. We use classes (not only the dir attribute) so the user
+ * can tune alignment/font without us touching inline styles on every node.
+ * ------------------------------------------------------------------------- */
+.rtlx-rtl {
+  direction: rtl !important;
+  text-align: right !important;
+  /* Numerals/parentheses inside RTL still resolve correctly via the bidi
+     algorithm; we only flip the block direction. */
+}
+
+.rtlx-ltr {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* Font family is a SEPARATE concern from direction: the user may want the
+   pretty Persian font only where it's RTL. The engine adds .rtlx-font to RTL
+   blocks when a font is selected. A CSS variable lets the popup switch fonts
+   without rewriting classes. */
+:root {
+  --rtlx-font-stack: "Vazirmatn RTLX", "Vazirmatn", "Sahel", "Tahoma", sans-serif;
+  --rtlx-font-scale: 1;
+  --rtlx-line-height: 1.85;
+  --rtlx-letter-spacing: 0;
+}
+
+.rtlx-font {
+  font-family: var(--rtlx-font-stack) !important;
+  line-height: var(--rtlx-line-height) !important;
+  letter-spacing: var(--rtlx-letter-spacing) !important;
+}
+
+/* Slightly larger glyphs read better for Persian; opt-in via scale > 1. */
+.rtlx-scale {
+  font-size: calc(1em * var(--rtlx-font-scale)) !important;
+}
+
+/* Never touch code: keep monospace + LTR even when the engine processed a
+   parent. The engine also skips <pre>/<code>, this is belt-and-suspenders. */
+.rtlx-rtl pre,
+.rtlx-rtl code,
+.rtlx-rtl kbd,
+.rtlx-rtl samp {
+  direction: ltr !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace !important;
+  unicode-bidi: embed;
+}
+
+/* Lists & quotes: mirror their decorations under RTL. */
+.rtlx-rtl ul,
+.rtlx-rtl ol {
+  padding-right: 1.5em;
+  padding-left: 0;
+}
+.rtlx-rtl blockquote {
+  border-right: 3px solid currentColor;
+  border-left: none;
+  padding-right: 1em;
+  padding-left: 0;
+}
+
+/* Compose box (contenteditable / textarea) flips per typed content. */
+.rtlx-input {
+  /* dir="auto" (set by the engine) handles direction + alignment;
+     we only add the font so the caret and glyphs never desync. */
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Inline isolation. Inside an RTL paragraph, runs of LTR content — links,
+ * inline code, file paths, numbers, math — must NOT reorder or jump to the
+ * wrong side. `unicode-bidi: isolate` makes the bidi algorithm treat each as a
+ * single neutral unit, so "نسخه‌ی v2.1.3 را ببینید" and inline `code` stay put.
+ * ------------------------------------------------------------------------- */
+.rtlx-rtl a,
+.rtlx-rtl code,
+.rtlx-rtl time,
+.rtlx-rtl tt,
+.rtlx-rtl [class*="katex"],
+.rtlx-rtl [class*="math"] {
+  unicode-bidi: isolate;
+}
+
+/* ---------------------------------------------------------------------------
+ * Per-message direction toggle button (injected by content.js into each
+ * message container). Hidden until you hover the message; cycles auto/RTL/LTR.
+ * ------------------------------------------------------------------------- */
+.rtlx-host {
+  position: relative;
+}
+.rtlx-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 50; /* above message text, below the site's toolbars/overlays */
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 11px/1 system-ui, -apple-system, Segoe UI, sans-serif;
+  letter-spacing: 0.02em;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.16);
+  border: 1px solid rgba(128, 128, 128, 0.22);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  /* While invisible the button must NOT capture clicks/hover meant for the
+     site's own message controls (copy, etc.) sitting in the same corner. */
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  user-select: none;
+  direction: ltr; /* the label "RTL"/"LTR" itself stays LTR */
+}
+.rtlx-host:hover > .rtlx-toggle,
+.rtlx-toggle:focus-visible {
+  opacity: 0.7;
+  pointer-events: auto;
+}
+.rtlx-toggle:hover {
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.3);
+}
+/* Tint + keep clickable when a manual override is active (auto-detect is off). */
+.rtlx-toggle[data-state="rtl"],
+.rtlx-toggle[data-state="ltr"] {
+  opacity: 0.85;
+  pointer-events: auto;
+  background: rgba(217, 119, 87, 0.22);
+  border-color: rgba(217, 119, 87, 0.5);
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-__NONCE__';" />
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); padding: 10px 12px 18px; }
+  h2 { font-size: 13px; margin: 0 0 2px; }
+  .sub { color: var(--vscode-descriptionForeground); font-size: 11px; margin-bottom: 14px; }
+  .card { background: var(--vscode-editorWidget-background, rgba(127,127,127,.06)); border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.16)); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 9px 0; }
+  .row label { font-size: 12px; }
+  .ctl { display: flex; align-items: center; gap: 8px; }
+  select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border, transparent); border-radius: 4px; padding: 3px 6px; font-family: inherit; }
+  input[type="range"] { width: 116px; accent-color: var(--vscode-focusBorder); }
+  .val { font-variant-numeric: tabular-nums; color: var(--vscode-descriptionForeground); font-size: 11px; min-width: 36px; text-align: right; }
+  button { font-family: inherit; font-size: 12px; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; }
+  .btns { display: flex; gap: 8px; margin: 4px 0 2px; }
+  .primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); flex: 1; }
+  .primary:hover { background: var(--vscode-button-hoverBackground); }
+  .ghost { background: var(--vscode-button-secondaryBackground, rgba(127,127,127,.18)); color: var(--vscode-button-secondaryForeground, inherit); }
+  .ghost:hover { background: var(--vscode-button-secondaryHoverBackground, rgba(127,127,127,.28)); }
+  .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: rgba(127,127,127,.4); border-radius: 999px; transition: .15s; }
+  .slider::before { content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: .15s; }
+  input:checked + .slider { background: var(--vscode-testing-iconPassed, #3fb950); }
+  input:checked + .slider::before { transform: translateX(16px); }
+  a { color: var(--vscode-textLink-foreground); cursor: pointer; }
+  #opts.muted { opacity: .45; pointer-events: none; }
+</style>
+</head>
+<body>
+  <h2>RTL for Claude</h2>
+  <div class="sub">Right-to-left for the Claude Code chat.</div>
+
+  <div class="card">
+    <div class="row">
+      <label><strong>Enabled</strong></label>
+      <label class="switch"><input type="checkbox" id="enabled" /><span class="slider"></span></label>
+    </div>
+    <div class="sub" style="margin: 2px 0 0;">Turning this off restores the original chat.</div>
+  </div>
+
+  <div id="opts">
+    <div class="card">
+      <div class="row">
+        <label>Font</label>
+        <select id="font.family"><option>Vazirmatn</option><option>Sahel</option><option>System default</option></select>
+      </div>
+      <div class="row"><label>Text size</label><span class="ctl"><input type="range" id="font.scale" min="0.8" max="1.6" step="0.05" /><span class="val" id="font.scale_v"></span></span></div>
+      <div class="row"><label>Line spacing</label><span class="ctl"><input type="range" id="font.lineHeight" min="1.3" max="2.5" step="0.05" /><span class="val" id="font.lineHeight_v"></span></span></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <label>Detection</label>
+        <select id="detection.mode"><option value="ratio">Smart (ratio)</option><option value="first-strong">First letter</option></select>
+      </div>
+      <div class="row" id="thrRow"><label>RTL threshold</label><span class="ctl"><input type="range" id="detection.threshold" min="0.1" max="0.7" step="0.05" /><span class="val" id="detection.threshold_v"></span></span></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><label>Flip the message box as you type</label><label class="switch"><input type="checkbox" id="applyToInput" /><span class="slider"></span></label></div>
+      <div class="row"><label>Per-message direction toggle</label><label class="switch"><input type="checkbox" id="showMessageToggles" /><span class="slider"></span></label></div>
+      <div class="row"><label>Keep code left-to-right</label><label class="switch"><input type="checkbox" id="keepCodeLeftToRight" /><span class="slider"></span></label></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><label>Re-apply after Claude updates</label><label class="switch"><input type="checkbox" id="autoApplyOnStartup" /><span class="slider"></span></label></div>
+      <div class="row"><label>Show in left sidebar</label><label class="switch"><input type="checkbox" id="showInActivityBar" /><span class="slider"></span></label></div>
+      <div class="row"><label>Show in status bar</label><label class="switch"><input type="checkbox" id="showStatusBar" /><span class="slider"></span></label></div>
+    </div>
+  </div>
+
+  <div class="sub"><a id="openSettings">Open full Settings →</a></div>
+
+<script nonce="__NONCE__">
+  const vscode = acquireVsCodeApi();
+  const $ = (id) => document.getElementById(id);
+  const BOOL = ["enabled", "applyToInput", "showMessageToggles", "keepCodeLeftToRight", "autoApplyOnStartup", "showInActivityBar", "showStatusBar"];
+  const SEL = ["font.family", "detection.mode"];
+  const NUM = ["font.scale", "font.lineHeight", "detection.threshold"];
+  const send = (key, value) => vscode.postMessage({ type: "set", key, value });
+  const fmt = (id, v) => { const e = $(id + "_v"); if (e) e.textContent = id === "font.scale" ? Math.round(v * 100) + "%" : (+v).toFixed(2); };
+  function syncThreshold() { $("thrRow").style.display = $("detection.mode").value === "ratio" ? "" : "none"; }
+
+  BOOL.forEach((id) => $(id) && $(id).addEventListener("change", (e) => send(id, e.target.checked)));
+  SEL.forEach((id) => $(id) && $(id).addEventListener("change", (e) => { send(id, e.target.value); if (id === "detection.mode") syncThreshold(); }));
+  NUM.forEach((id) => $(id) && $(id).addEventListener("input", (e) => fmt(id, e.target.value)));
+  NUM.forEach((id) => $(id) && $(id).addEventListener("change", (e) => send(id, parseFloat(e.target.value))));
+  $("openSettings").addEventListener("click", () => vscode.postMessage({ type: "cmd", name: "openSettings" }));
+
+  window.addEventListener("message", (ev) => {
+    const m = ev.data;
+    if (!m || m.type !== "state") return;
+    const s = m.settings;
+    BOOL.forEach((id) => { if ($(id)) $(id).checked = !!s[id]; });
+    SEL.forEach((id) => { if ($(id)) $(id).value = s[id]; });
+    NUM.forEach((id) => { if ($(id)) { $(id).value = s[id]; fmt(id, s[id]); } });
+    syncThreshold();
+    $("opts").classList.toggle("muted", !s.enabled);
+  });
+
+  vscode.postMessage({ type: "ready" });
+</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+/* ============================================================================
+ * RTL for Claude — webview styles (injected into the Claude Code chat).
+ * Direction itself is set by driver.js via the native `dir` attribute; this
+ * sheet supplies the font, alignment, code protection and the toggle buttons.
+ * CSS variables are driven by your settings (or the defaults in the driver).
+ * ========================================================================== */
+
+@font-face {
+  font-family: "Vazirmatn RTLX";
+  src: url("./vazirmatn.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Pretty font on every stamped block. */
+.rtlx-font {
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+  line-height: var(--rtlx-line-height, 1.85) !important;
+  font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;
+}
+
+/* Make alignment follow the (native) resolved direction, beating any app rule.
+   Only our stamped message blocks carry a dir attribute, so this is scoped. */
+[class*="message_"] [dir],
+[class*="message_"][dir],
+[class*="userMessage_"] [dir],
+[class*="userMessage_"][dir] {
+  text-align: start !important;
+}
+
+/* Compose box. Claude paints the contenteditable text TRANSPARENT (.messageInput,
+   which owns the caret) and renders the visible glyphs in a separate overlaid
+   mirror (.mentionMirror). The driver flags the input container based on what you
+   typed; we must flip BOTH layers — and give them the SAME font — or the caret
+   (real editable) and the glyphs (mirror) drift apart. The app sets no direction
+   of its own, so one !important wins. */
+[class*="inputContainer_"].rtlx-input-rtl [class*="messageInput_"],
+[class*="inputContainer_"].rtlx-input-rtl [class*="mentionMirror_"] {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+}
+[class*="inputContainer_"].rtlx-input-ltr [class*="messageInput_"],
+[class*="inputContainer_"].rtlx-input-ltr [class*="mentionMirror_"] {
+  direction: ltr !important;
+  text-align: left !important;
+}
+/* placeholder follows RTL too */
+[class*="inputContainer_"].rtlx-input-rtl [class*="messageInput_"]:empty::before {
+  right: 14px;
+  left: auto;
+  text-align: right;
+}
+
+/* Inline links / code / numbers inside an RTL block must not jump. */
+[dir="rtl"] a,
+[dir="rtl"] code,
+[dir="rtl"] time,
+[dir="auto"] a,
+[dir="auto"] code {
+  unicode-bidi: isolate;
+}
+
+/* Code, diffs, terminals stay LTR — only when keepCodeLeftToRight is on. */
+.rtlx-code-ltr [class*="message_"] pre,
+.rtlx-code-ltr [class*="message_"] code,
+.rtlx-code-ltr [class*="message_"] kbd,
+.rtlx-code-ltr [class*="message_"] samp,
+.rtlx-code-ltr [class*="codeBlock_"],
+.rtlx-code-ltr [class*="diff_"] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+}
+
+/* --- per-message direction toggle (driver injects the button) ------------- */
+.rtlx-host { position: relative; }
+.rtlx-toggle {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
+  z-index: 50;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 11px/1 system-ui, -apple-system, Segoe UI, sans-serif;
+  letter-spacing: 0.02em;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.16);
+  border: 1px solid rgba(128, 128, 128, 0.22);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  user-select: none;
+  direction: ltr;
+}
+.rtlx-host:hover > .rtlx-toggle,
+.rtlx-toggle:focus-visible { opacity: 0.7; pointer-events: auto; }
+.rtlx-toggle:hover { opacity: 1; background: rgba(128, 128, 128, 0.3); }
+.rtlx-toggle[data-state="rtl"],
+.rtlx-toggle[data-state="ltr"] {
+  opacity: 0.85;
+  pointer-events: auto;
+  background: rgba(217, 119, 87, 0.22);
+  border-color: rgba(217, 119, 87, 0.5);
+}
+
+/* --- global floating toggle (flip the whole chat, no reload) -------------- */
+#rtlx-global {
+  position: fixed;
+  bottom: 14px;
+  inset-inline-end: 16px;
+  z-index: 2147483600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 11px;
+  font: 600 11px/1 system-ui, -apple-system, Segoe UI, sans-serif;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-button-background, #d97757);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.55;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  transition: opacity 0.15s ease, transform 0.1s ease;
+  direction: ltr;
+}
+#rtlx-global:hover { opacity: 1; }
+#rtlx-global:active { transform: scale(0.96); }
+#rtlx-global[data-state="auto"] {
+  background: var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.5));
+  color: var(--vscode-button-secondaryForeground, inherit);
+}
