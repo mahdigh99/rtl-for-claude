@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "RTL for Claude — راست‌چین",
-  "version": "1.0.0",
+  "name": "RTL for Claude",
+  "version": "1.0.1",
   "description": "Persian, Arabic, Urdu & every RTL language, finally readable in Claude, ChatGPT & Gemini. Vazirmatn font. 100% local.",
   "browser_specific_settings": {
     "gecko": {
@@ -9,9 +9,7 @@
       "strict_min_version": "115.0"
     }
   },
-  "permissions": [
-    "storage"
-  ],
+  "permissions": ["storage"],
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "RTL for Claude",
@@ -37,21 +35,14 @@
         "https://chat.openai.com/*",
         "https://gemini.google.com/*"
       ],
-      "js": [
-        "src/rtl-engine.js",
-        "src/content.js"
-      ],
-      "css": [
-        "src/styles.css"
-      ],
+      "js": ["src/rtl-engine.js", "src/content.js"],
+      "css": ["src/styles.css"],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": [
-        "fonts/*"
-      ],
+      "resources": ["fonts/*"],
       "matches": [
         "https://claude.ai/*",
         "https://*.claude.ai/*",

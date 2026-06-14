@@ -3,6 +3,19 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension).
 This project follows [Semantic Versioning](https://semver.org).
 
+## [1.0.1] — 2026-06-14
+
+Browser extension reliability pass (Claude/ChatGPT/Gemini). VS Code extension unchanged.
+
+### Fixed
+- **App chrome no longer breaks.** Direction is flipped only on real content; layout `<div>`s (sidebar, header, toolbars) are never touched, so the logo, nav and buttons stay intact.
+- **Vazirmatn font now applies reliably**, including inner text runs — while code blocks stay monospace.
+- **The direction toggle now affects the whole conversation** (Claude's answer too), even after Claude renamed its message container class.
+- Removed a steady-state background re-flush loop, a stale-state race when disabling the extension, and incomplete handling of `*.claude.ai` subdomains.
+
+### Changed
+- Replaced the per-message ⇌ button with **one floating direction toggle** that pins the whole chat: auto → RTL → LTR. It's independent of each site's message markup, so it works consistently everywhere.
+
 ## [1.0.0] — 2026-06-12
 
 First public release. 🎉

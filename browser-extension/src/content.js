@@ -24,7 +24,8 @@
     lineHeight: 1.85,
     letterSpacing: 0,
     applyToInput: true,
-    showToggles: true, // per-message manual RTL/LTR override button
+    showToggles: true, // show the floating whole-chat direction toggle
+    forceAll: null, // global direction pin from the floating toggle: null | "rtl" | "ltr"
     sites: {
       "claude.ai": true,
       "chatgpt.com": true,
@@ -42,7 +43,7 @@
   // --- settings -------------------------------------------------------------
 
   function hostEnabled(s) {
-    const host = location.hostname.replace(/^www\./, "");
+    const host = baseHost();
     if (host in s.sites) return s.sites[host];
     return s.sites["*"] !== false;
   }
@@ -82,11 +83,12 @@
     const roots = [...pending];
     pending.clear();
     const run = () => {
+      if (!active) return; // a stop() may have landed after this idle cb was queued
+      ensureGlobalToggle(); // re-assert the floating button if a re-render dropped it
       for (const root of roots) {
         if (!root || !root.isConnected) continue;
         try {
           RTLX.processSubtree(root, settings);
-          ensureToggles(root);
         } catch (e) {
           /* never let one bad node break the loop */
         }
@@ -123,14 +125,9 @@
       RTLX.applyToInput(e.target, settings);
   }
 
-  // --- per-message manual toggle (escape hatch when auto-detect is wrong) --
-  //
-  // Auto-detection is never 100% (a paragraph that opens in the minority
-  // language can be mis-based). A tiny ⇌ button on each message lets the user
-  // force its whole direction: auto → RTL → LTR → auto. The override is stored
-  // as data-rtlx-force on the message container and respected by the engine.
-
-  // Where a "message" is, per site. Unknown sites simply get no buttons.
+  // Where a "message" / real content lives, per site. Fed to the engine as
+  // settings.contentSelector so a <div> only flips INSIDE content (never the
+  // app chrome). Unknown sites → null → prose-tags-only (always chrome-safe).
   const SITE_SELECTORS = {
     "claude.ai": '.font-claude-message, [data-testid="user-message"]',
     "chatgpt.com": "[data-message-author-role]",
@@ -138,70 +135,104 @@
     "gemini.google.com": "message-content, .query-content",
   };
 
+  // Resolve the registrable site key even on subdomains (app.claude.ai →
+  // claude.ai) so a known site keeps its content selector — and forceAll stays
+  // confined to messages — no matter which subdomain serves the app.
+  function baseHost() {
+    const h = location.hostname.replace(/^www\./, "");
+    if (SITE_SELECTORS[h]) return h;
+    const k = Object.keys(SITE_SELECTORS).find((key) => h === key || h.endsWith("." + key));
+    return k || h;
+  }
+
   function messageSelector() {
-    return SITE_SELECTORS[location.hostname.replace(/^www\./, "")] || null;
+    return SITE_SELECTORS[baseHost()] || null;
   }
 
-  function updateToggleLabel(container, btn) {
-    const cur = container.getAttribute(RTLX.FORCE_ATTR);
-    if (cur === "rtl") {
-      btn.textContent = "RTL";
-      btn.title = "این پیام: راست‌به‌چپ (دستی) — کلیک برای چپ‌به‌راست";
-    } else if (cur === "ltr") {
-      btn.textContent = "LTR";
-      btn.title = "این پیام: چپ‌به‌راست (دستی) — کلیک برای خودکار";
+  // --- global direction toggle (one floating button for the WHOLE chat) -----
+  //
+  // Auto-detection is excellent but never 100%. A per-message button fought
+  // each site's own message toolbars (and broke on Claude). Instead we float
+  // ONE button on the viewport that pins the whole conversation:
+  //   auto (⇌) → RTL → LTR → auto.
+  // The choice is saved (storage.sync.forceAll), so it sticks across reloads,
+  // and because it's a fixed element on <body> it behaves identically on every
+  // site regardless of message structure.
+
+  const GLOBAL_ID = "rtlx-global-toggle";
+
+  function paintGlobalToggle(btn) {
+    const v = settings.forceAll; // null = auto; "rtl" / "ltr" = forced
+    let label, title, st;
+    if (v === "rtl") {
+      label = "RTL";
+      title = "کلِ گفتگو: راست‌چینِ دستی — کلیک: چپ‌چین";
+      st = "rtl";
+    } else if (v === "ltr") {
+      label = "LTR";
+      title = "کلِ گفتگو: چپ‌چینِ دستی — کلیک: خودکار";
+      st = "ltr";
     } else {
-      btn.textContent = "⇌"; // ⇌
-      btn.title = "جهت این پیام: خودکار — کلیک برای راست‌به‌چپِ دستی";
+      label = "⇌";
+      title = "جهتِ گفتگو: خودکار — کلیک: راست‌چینِ دستی";
+      st = "auto";
     }
-    btn.dataset.state = cur || "auto";
+    // Write ONLY on change. Setting textContent — even to the same string —
+    // replaces the text node and fires a childList mutation that our own
+    // MutationObserver would see and reschedule, a permanent ~5×/sec self-flush
+    // loop. Guarding makes a steady-state repaint emit zero mutations.
+    if (btn.textContent !== label) btn.textContent = label;
+    if (btn.title !== title) btn.title = title;
+    if (btn.dataset.state !== st) btn.dataset.state = st;
   }
 
-  function cycleForce(container, btn) {
-    const cur = container.getAttribute(RTLX.FORCE_ATTR);
-    const next = cur === "rtl" ? "ltr" : cur === "ltr" ? null : "rtl";
-    if (next) container.setAttribute(RTLX.FORCE_ATTR, next);
-    else container.removeAttribute(RTLX.FORCE_ATTR);
-    updateToggleLabel(container, btn);
+  function applyForceAllNow() {
+    if (!active) return;
+    settings.contentSelector = messageSelector();
     try {
-      RTLX.processSubtree(container, settings); // re-classify with new override
+      RTLX.processSubtree(document.body, settings);
     } catch (e) {}
   }
 
-  function addToggle(container) {
-    if (container.querySelector(":scope > .rtlx-toggle")) return; // already has one
-    container.classList.add("rtlx-host");
-    const btn = document.createElement("button");
-    btn.className = "rtlx-toggle";
-    btn.type = "button";
-    btn.setAttribute("aria-label", "تغییر جهت این پیام");
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      cycleForce(container, btn);
-    });
-    updateToggleLabel(container, btn);
-    container.appendChild(btn);
-  }
-
-  function ensureToggles(root) {
-    if (!settings.showToggles) return;
-    const sel = messageSelector();
-    if (!sel || !root || root.nodeType !== 1) return;
+  // The floating button pins the WHOLE chat's direction, cycling:
+  //   auto (⇌) → RTL → LTR → auto → …
+  function cycleGlobal() {
+    const cur = settings.forceAll;
+    settings.forceAll = cur === "rtl" ? "ltr" : cur === "ltr" ? null : "rtl";
+    // Apply RIGHT NOW, synchronously, in this tab — never depend on the
+    // storage.onChanged round-trip (it can be async or swallowed). Persist too.
+    applyForceAllNow();
     try {
-      if (root.matches && root.matches(sel)) addToggle(root);
-      root.querySelectorAll(sel).forEach(addToggle);
+      api.storage.sync.set({ forceAll: settings.forceAll });
     } catch (e) {}
   }
 
-  function teardownToggles() {
-    document.querySelectorAll(".rtlx-toggle").forEach((b) => b.remove());
-    document
-      .querySelectorAll(".rtlx-host")
-      .forEach((c) => c.classList.remove("rtlx-host"));
-    document
-      .querySelectorAll("[" + RTLX.FORCE_ATTR + "]")
-      .forEach((c) => c.removeAttribute(RTLX.FORCE_ATTR));
+  function ensureGlobalToggle() {
+    if (!settings.showToggles) {
+      removeGlobalToggle();
+      return;
+    }
+    let btn = document.getElementById(GLOBAL_ID);
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = GLOBAL_ID;
+      btn.className = "rtlx-global-toggle";
+      btn.type = "button";
+      btn.setAttribute("aria-label", "تغییر جهتِ کلِ گفتگو");
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cycleGlobal();
+        paintGlobalToggle(btn); // instant feedback before the storage round-trip
+      });
+      (document.body || document.documentElement).appendChild(btn);
+    }
+    paintGlobalToggle(btn);
+  }
+
+  function removeGlobalToggle() {
+    const btn = document.getElementById(GLOBAL_ID);
+    if (btn) btn.remove();
   }
 
   // --- SPA navigation (Claude swaps conversations without a reload) --------
@@ -233,12 +264,19 @@
     if (active) return;
     if (!settings.enabled || !hostEnabled(settings)) return;
     active = true;
+    // Tell the engine where "real content" lives on this site. Outside it, a
+    // <div> is treated as layout and never flipped (keeps the app chrome intact);
+    // inside it, content <div>s flip too. null on unknown sites → prose-only,
+    // which is always chrome-safe.
+    settings.contentSelector = messageSelector();
     applyCssVars();
     hookHistory();
 
-    // Initial pass over everything already on screen.
-    RTLX.processSubtree(document.body, settings);
-    ensureToggles(document.body);
+    // Initial pass over everything already on screen (the engine skips inputs).
+    try {
+      RTLX.processSubtree(document.body, settings);
+    } catch (e) {}
+    ensureGlobalToggle();
 
     observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -257,10 +295,15 @@
           m.addedNodes.forEach((n) => {
             if (n.nodeType === 1) {
               // Ignore our own injected toggle button — otherwise appending it
-              // would schedule a redundant re-sweep of the message.
-              if (n.classList && n.classList.contains("rtlx-toggle")) return;
+              // would schedule a redundant re-sweep.
+              if (n.classList && n.classList.contains("rtlx-global-toggle")) return;
               schedule(n);
-            } else if (n.nodeType === 3 && n.parentElement) schedule(n.parentElement);
+            } else if (n.nodeType === 3 && n.parentElement) {
+              // Skip the toggle's own label text node (its repaint) so we never
+              // reschedule ourselves.
+              if (n.parentElement.id === GLOBAL_ID) return;
+              schedule(n.parentElement);
+            }
           });
         } else {
           const root = m.target.nodeType === 1 ? m.target : m.target.parentElement;
@@ -292,7 +335,7 @@
     pending.clear();
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("focusin", onFocusIn, true);
-    teardownToggles();
+    removeGlobalToggle();
     // Reset so a later start() re-validates the history hooks. (The wrappers
     // themselves persist and are guarded by `active`, but keeping this flag
     // honest avoids surprises if stop() ever learns to unhook.)
@@ -312,6 +355,10 @@
   let settingsOp = Promise.resolve();
   api.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== "sync") return;
+    // The floating toggle already applied forceAll instantly in its own tab; a
+    // lone forceAll change must not trigger a teardown/restart that fights it.
+    const keys = Object.keys(changes || {});
+    if (keys.length === 1 && keys[0] === "forceAll") return;
     settingsOp = settingsOp
       .then(() => loadSettings())
       .then(() => {

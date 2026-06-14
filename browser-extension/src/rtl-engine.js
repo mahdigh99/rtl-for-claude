@@ -125,17 +125,44 @@
    */
   function applyToBlock(el, settings) {
     if (SKIP_TAGS.has(el.tagName)) return false;
-    // Inside a <pre>/<code>? bail.
-    if (el.closest && el.closest("pre, code")) return false;
+    // Inside a <pre>/<code> or any editable area? bail — code stays LTR and the
+    // compose box is handled separately by applyToInput, never by the sweep.
+    if (el.closest && el.closest('pre, code, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'))
+      return false;
 
-    // A manual per-message override (set on an ancestor by the toggle button)
-    // wins over automatic detection.
+    // A generic <div> is almost always LAYOUT (a flex/grid row in the sidebar,
+    // header or a toolbar). Setting dir="rtl" on a flex container REVERSES the
+    // visual order of its children, which is exactly what breaks the app chrome
+    // (logo, nav, "Code/Upgrade" overlap). So a <div> is only eligible when it
+    // sits INSIDE a known message/content region. Real prose tags (P, LI, H*,
+    // TD, BLOCKQUOTE, …) are always safe to flip because they are not layout —
+    // so the core text still works even if the content selector is imperfect.
+    if (el.tagName === "DIV") {
+      const sel = settings && settings.contentSelector;
+      if (!sel || !(el.closest && el.closest(sel))) return false;
+    }
+
+    // A manual per-element override (set on an ancestor via FORCE_ATTR) wins
+    // over everything — kept as a low-level hook.
     const forcedEl = el.closest ? el.closest("[" + FORCE_ATTR + "]") : null;
     const forceVal = forcedEl && forcedEl.getAttribute(FORCE_ATTR);
 
     let dir;
-    if (forceVal === "rtl" || forceVal === "ltr") dir = forceVal;
-    else dir = detectDirection(ownText(el), settings);
+    if (forceVal === "rtl" || forceVal === "ltr") {
+      dir = forceVal;
+    } else {
+      dir = detectDirection(ownText(el), settings);
+      // Global "pin the whole conversation" override, driven by the floating
+      // toggle. Re-aim EVERY block we'd already touch (dir !== null). We do NOT
+      // re-scope to contentSelector here: by this point the block already passed
+      // the div-gate (chrome layout divs are rejected above) and has real
+      // directional text, so it IS chat content. Scoping forceAll to
+      // contentSelector was wrong — when a site renames its message class the
+      // override would silently reach only a fraction of the conversation.
+      if ((settings.forceAll === "rtl" || settings.forceAll === "ltr") && dir !== null) {
+        dir = settings.forceAll;
+      }
+    }
 
     // Nothing directional and we never touched it → leave the page pristine.
     if (dir === null) {

@@ -15,6 +15,7 @@
     letterSpacing: 0,
     applyToInput: true,
     showToggles: true,
+    forceAll: null,
     sites: { "claude.ai": true, "chatgpt.com": true, "chat.openai.com": true, "gemini.google.com": true, "*": true },
   };
 

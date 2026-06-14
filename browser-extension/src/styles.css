@@ -66,6 +66,15 @@
   letter-spacing: var(--rtlx-letter-spacing) !important;
 }
 
+/* Some sites set font-family on INNER runs (bold/links/spans), which would beat
+   the value inherited from the block and leave the page font showing. Force the
+   Persian font onto descendants too. `:where()` gives this rule ZERO specificity
+   so the monospace reset below (real specificity) still wins inside code, and
+   our own toggle keeps its system font. */
+.rtlx-font :where(:not(pre, code, kbd, samp, .rtlx-global-toggle)) {
+  font-family: var(--rtlx-font-stack) !important;
+}
+
 /* Slightly larger glyphs read better for Persian; opt-in via scale > 1. */
 .rtlx-scale {
   font-size: calc(1em * var(--rtlx-font-scale)) !important;
@@ -74,7 +83,9 @@
 /* Never touch code: keep monospace + LTR even when the engine processed a
    parent. The engine also skips <pre>/<code>, this is belt-and-suspenders. */
 .rtlx-rtl pre,
+.rtlx-rtl pre *,
 .rtlx-rtl code,
+.rtlx-rtl code *,
 .rtlx-rtl kbd,
 .rtlx-rtl samp {
   direction: ltr !important;
@@ -120,52 +131,47 @@
 }
 
 /* ---------------------------------------------------------------------------
- * Per-message direction toggle button (injected by content.js into each
- * message container). Hidden until you hover the message; cycles auto/RTL/LTR.
+ * Floating direction toggle (one per page, injected by content.js into <body>).
+ * Pins the WHOLE conversation: auto (⇌) → RTL → LTR → auto. Fixed to the
+ * viewport so it works on every site regardless of message structure. Lives in
+ * the bottom-right corner, faint until hovered.
  * ------------------------------------------------------------------------- */
-.rtlx-host {
-  position: relative;
-}
-.rtlx-toggle {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  z-index: 50; /* above message text, below the site's toolbars/overlays */
-  min-width: 22px;
-  height: 20px;
-  padding: 0 5px;
+.rtlx-global-toggle {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 2147483000; /* above page content; clear of the app's own overlays */
+  min-width: 34px;
+  height: 34px;
+  padding: 0 11px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font: 600 11px/1 system-ui, -apple-system, Segoe UI, sans-serif;
-  letter-spacing: 0.02em;
-  color: inherit;
-  background: rgba(128, 128, 128, 0.16);
-  border: 1px solid rgba(128, 128, 128, 0.22);
-  border-radius: 6px;
+  font: 600 12px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: rgba(38, 38, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
   cursor: pointer;
-  opacity: 0;
-  /* While invisible the button must NOT capture clicks/hover meant for the
-     site's own message controls (copy, etc.) sitting in the same corner. */
-  pointer-events: none;
-  transition: opacity 0.15s ease, background 0.15s ease;
-  user-select: none;
-  direction: ltr; /* the label "RTL"/"LTR" itself stays LTR */
-}
-.rtlx-host:hover > .rtlx-toggle,
-.rtlx-toggle:focus-visible {
-  opacity: 0.7;
-  pointer-events: auto;
-}
-.rtlx-toggle:hover {
-  opacity: 1;
-  background: rgba(128, 128, 128, 0.3);
-}
-/* Tint + keep clickable when a manual override is active (auto-detect is off). */
-.rtlx-toggle[data-state="rtl"],
-.rtlx-toggle[data-state="ltr"] {
   opacity: 0.85;
-  pointer-events: auto;
-  background: rgba(217, 119, 87, 0.22);
-  border-color: rgba(217, 119, 87, 0.5);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  direction: ltr; /* the label "RTL"/"LTR"/"⇌" itself stays LTR */
+}
+.rtlx-global-toggle:hover,
+.rtlx-global-toggle:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+  outline: none;
+}
+/* Tinted when a manual pin is active (auto-detect overridden). */
+.rtlx-global-toggle[data-state="rtl"],
+.rtlx-global-toggle[data-state="ltr"] {
+  opacity: 0.95;
+  background: rgba(217, 119, 87, 0.9);
+  border-color: rgba(217, 119, 87, 0.95);
 }
