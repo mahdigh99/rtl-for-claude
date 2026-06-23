@@ -50,7 +50,7 @@
    *     RTL paragraph routinely contains English technical terms).
    * @returns {"rtl"|"ltr"|null}  null = no strong chars, leave the page alone.
    */
-  function detectDirection(text, opts) {
+  function detectDirection(text, opts, currentDir) {
     opts = opts || {};
     if (!text) return null;
     // Fast path: no RTL script at all → never our concern.
@@ -67,7 +67,17 @@
     const strong = rtl + ltr;
     if (strong === 0) return null;
     const threshold = typeof opts.threshold === "number" ? opts.threshold : 0.3;
-    return rtl / strong >= threshold ? "rtl" : "ltr";
+    const ratio = rtl / strong;
+    // Hysteresis (deadband). While an answer STREAMS in, this same block is
+    // re-classified on every token; the RTL share crosses `threshold` back and
+    // forth, which made the text visibly jump left↔right. Once a block already
+    // has a direction, resist flipping until the text is CLEARLY the other way:
+    //   • already RTL → stay RTL unless RTL share collapses (well below thresh)
+    //   • already LTR → become RTL only with a clear RTL majority
+    // A block with no prior decision uses the plain threshold.
+    if (currentDir === "rtl") return ratio >= threshold * 0.4 ? "rtl" : "ltr";
+    if (currentDir === "ltr") return ratio >= Math.min(0.6, threshold + 0.15) ? "rtl" : "ltr";
+    return ratio >= threshold ? "rtl" : "ltr";
   }
 
   // --- DOM helpers ----------------------------------------------------------
@@ -112,82 +122,84 @@
 
   const DIR_RTL = "rtlx-rtl";
   const DIR_LTR = "rtlx-ltr";
+  const DIR_AUTO = "rtlx-auto";
   const FONT = "rtlx-font";
   const SCALE = "rtlx-scale";
-  // Marker storing the last decision so streaming re-runs are near free.
+  // Marker storing the last applied decision so streaming re-runs are near free.
   const STAMP = "data-rtlx";
   // Manual per-message override set by the toggle button (rtl | ltr | auto).
   const FORCE_ATTR = "data-rtlx-force";
+  // ONE-WAY "this message is RTL" flag, stamped on a message's STABLE container
+  // once it shows enough Persian. It is never removed (until teardown), so once a
+  // Persian answer turns RTL it STAYS RTL — even if a long English run streams in
+  // mid-paragraph and momentarily drops the ratio. This is the whole anti-jump
+  // mechanism: at most ONE flip (the moment Persian becomes significant), then
+  // rock-stable, and it survives the site re-creating the paragraph per token
+  // because the flag lives on the container, not the volatile leaf.
+  const SEEN_ATTR = "data-rtlx-seen";
+  // Global pin from the floating toggle, set on <html> by content.js; CSS keys on
+  // it to force the whole conversation one way without touching any node.
+  const FORCE_ALL_ATTR = "data-rtlx-force-all";
+
+  // The STABLE container that carries the one-way RTL flag. Reuse an ancestor
+  // that ALREADY has the flag (sticky anchor); else the site's message container;
+  // else the nearest big-enough ancestor; else the parent. Never the leaf.
+  function seenContainer(el, settings) {
+    if (el.closest) {
+      let s = null;
+      try { s = el.closest("[" + SEEN_ATTR + "]"); } catch (e) {}
+      if (s) return s;
+      const sel = settings && settings.contentSelector;
+      if (sel) {
+        let c = null;
+        try { c = el.closest(sel); } catch (e) {}
+        if (c) return c;
+      }
+    }
+    let node = el.parentElement, hops = 0;
+    while (node && hops < 6) {
+      if ((node.textContent || "").length >= 150) return node;
+      node = node.parentElement;
+      hops++;
+    }
+    return el.parentElement || el;
+  }
 
   /**
    * Apply (or update) the classification on a single block element.
    * Returns true if it touched the element.
+   *
+   * Anti-jump strategy (see SEEN_ATTR): detection is memoryless and RTL-eager
+   * (low threshold), and once a message has shown enough Persian we pin a ONE-WAY
+   * RTL flag on its stable container so it can never flip back to LTR while it
+   * streams. Net: ≤1 flip per message (Persian becomes significant), then stable;
+   * survives per-token re-creation; pure-English prose is left untouched; a truly
+   * English paragraph inside an RTL message still renders LTR. The toggle pins an
+   * exact rtl/ltr.
    */
   function applyToBlock(el, settings) {
     if (SKIP_TAGS.has(el.tagName)) return false;
-    // Inside a <pre>/<code> or any editable area? bail — code stays LTR and the
-    // compose box is handled separately by applyToInput, never by the sweep.
+    // Skip code and editable areas; the compose box is handled by applyToInput.
     if (el.closest && el.closest('pre, code, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'))
       return false;
 
-    // A generic <div> is almost always LAYOUT (a flex/grid row in the sidebar,
-    // header or a toolbar). Setting dir="rtl" on a flex container REVERSES the
-    // visual order of its children, which is exactly what breaks the app chrome
-    // (logo, nav, "Code/Upgrade" overlap). So a <div> is only eligible when it
-    // sits INSIDE a known message/content region. Real prose tags (P, LI, H*,
-    // TD, BLOCKQUOTE, …) are always safe to flip because they are not layout —
-    // so the core text still works even if the content selector is imperfect.
-    if (el.tagName === "DIV") {
-      const sel = settings && settings.contentSelector;
-      if (!sel || !(el.closest && el.closest(sel))) return false;
+    const text = ownText(el);
+    if (!HAS_RTL_RE.test(text)) return false; // no RTL script → not our concern
+
+    // CRITICAL: we do NOT set dir/classes on this block. The block is volatile —
+    // the app (React/Angular) re-creates it on every streamed token, and if it
+    // also owns a `dir`, it wipes ours each render; we re-apply; it wipes again →
+    // the left↔right "jumping". Instead we mark the message's STABLE container
+    // with SEEN, and a CSS rule (with !important, which beats the app's own dir
+    // attribute) styles every prose descendant — current AND any re-created one —
+    // automatically. There is no per-node attribute for the app to wipe, so it
+    // can never flicker.
+    const container = seenContainer(el, settings);
+    if (container && !container.hasAttribute(SEEN_ATTR) && detectDirection(text, settings) === "rtl") {
+      container.setAttribute(SEEN_ATTR, "1");
+      return true;
     }
-
-    // A manual per-element override (set on an ancestor via FORCE_ATTR) wins
-    // over everything — kept as a low-level hook.
-    const forcedEl = el.closest ? el.closest("[" + FORCE_ATTR + "]") : null;
-    const forceVal = forcedEl && forcedEl.getAttribute(FORCE_ATTR);
-
-    let dir;
-    if (forceVal === "rtl" || forceVal === "ltr") {
-      dir = forceVal;
-    } else {
-      dir = detectDirection(ownText(el), settings);
-      // Global "pin the whole conversation" override, driven by the floating
-      // toggle. Re-aim EVERY block we'd already touch (dir !== null). We do NOT
-      // re-scope to contentSelector here: by this point the block already passed
-      // the div-gate (chrome layout divs are rejected above) and has real
-      // directional text, so it IS chat content. Scoping forceAll to
-      // contentSelector was wrong — when a site renames its message class the
-      // override would silently reach only a fraction of the conversation.
-      if ((settings.forceAll === "rtl" || settings.forceAll === "ltr") && dir !== null) {
-        dir = settings.forceAll;
-      }
-    }
-
-    // Nothing directional and we never touched it → leave the page pristine.
-    if (dir === null) {
-      if (el.hasAttribute(STAMP)) clearBlock(el);
-      return false;
-    }
-
-    const want = dir === "rtl" ? "rtl" : "ltr";
-    const stamp = want === "rtl" ? want + fontKey(settings) : want;
-    if (el.getAttribute(STAMP) === stamp) return false; // unchanged
-
-    el.classList.remove(DIR_RTL, DIR_LTR, FONT, SCALE);
-    if (dir === "rtl") {
-      el.classList.add(DIR_RTL);
-      el.setAttribute("dir", "rtl");
-      if (settings.fontEnabled) el.classList.add(FONT);
-      if (settings.fontScale && settings.fontScale !== 1) el.classList.add(SCALE);
-    } else {
-      // Block has RTL chars but reads LTR-dominant (e.g. English with one
-      // RTL word). Pin it LTR so the page's bidi doesn't mis-flip it.
-      el.classList.add(DIR_LTR);
-      el.setAttribute("dir", "ltr");
-    }
-    el.setAttribute(STAMP, stamp);
-    return true;
+    return false;
   }
 
   function fontKey(settings) {
@@ -198,7 +210,7 @@
     // Capture ownership BEFORE we wipe the stamp — we only ever set `dir`
     // on elements we also stamped, so the stamp is our proof of ownership.
     const owned = el.hasAttribute(STAMP);
-    el.classList.remove(DIR_RTL, DIR_LTR, FONT, SCALE);
+    el.classList.remove(DIR_RTL, DIR_LTR, DIR_AUTO, FONT, SCALE);
     el.removeAttribute(STAMP);
     if (owned) el.removeAttribute("dir");
   }
@@ -270,6 +282,8 @@
         clearBlock(el);
         el.classList.remove("rtlx-input", "rtlx-input-rtl", "rtlx-input-ltr");
       });
+    doc.querySelectorAll("[" + SEEN_ATTR + "]").forEach((el) => el.removeAttribute(SEEN_ATTR));
+    if (doc.documentElement) doc.documentElement.removeAttribute(FORCE_ALL_ATTR);
   }
 
   global.RTLX = {
@@ -282,5 +296,7 @@
     BLOCK_TAGS,
     SKIP_TAGS,
     FORCE_ATTR,
+    SEEN_ATTR,
+    FORCE_ALL_ATTR,
   };
 })(typeof window !== "undefined" ? window : this);

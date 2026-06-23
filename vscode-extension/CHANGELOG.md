@@ -3,6 +3,23 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [1.0.1] — 2026-06-23
+
+Major reliability pass for **streaming** answers.
+
+### Fixed
+- **No more left↔right “jumping” while an answer streams.** Direction is driven by
+  a marker on the message’s stable container plus CSS, never by attributes on the
+  paragraphs the webview re-creates per token — so the text stays put from the
+  first word.
+- **Tables** keep proper RTL column order; **your own message bubbles** render RTL
+  again; **code / inline code / numbers** stay LTR inside RTL messages.
+- App chrome and message-bubble layout are never broken (only content is flipped).
+
+### Added
+- **AskUserQuestion / option boxes go full RTL** — the radio moves to the right,
+  labels read right-to-left, code terms stay LTR.
+
 ## [1.0.0] — 2026-06-12
 
 First public release. 🎉

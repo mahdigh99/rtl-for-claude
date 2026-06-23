@@ -17,7 +17,8 @@
   const DEFAULT_SETTINGS = {
     enabled: true,
     mode: "ratio", // "ratio" | "first-strong"
-    threshold: 0.3, // ratio mode: min RTL share to call a block RTL
+    threshold: 0.1, // ratio mode: min RTL share to call a block RTL (low = turns
+    // RTL early & stays stable while streaming; Persian answers cross it fast)
     fontEnabled: true,
     fontFamily: '"Vazirmatn RTLX", "Vazirmatn", "Sahel", Tahoma, sans-serif',
     fontScale: 1,
@@ -186,8 +187,19 @@
     if (btn.dataset.state !== st) btn.dataset.state = st;
   }
 
+  // Reflect the global pin onto <html> as data-rtlx-force-all; the stylesheet
+  // does the rest (no per-node writes → nothing for the app to fight).
+  function applyForceMarker() {
+    const de = document.documentElement;
+    if (!de) return;
+    if (settings.forceAll === "rtl" || settings.forceAll === "ltr")
+      de.setAttribute(RTLX.FORCE_ALL_ATTR, settings.forceAll);
+    else de.removeAttribute(RTLX.FORCE_ALL_ATTR);
+  }
+
   function applyForceAllNow() {
     if (!active) return;
+    applyForceMarker();
     settings.contentSelector = messageSelector();
     try {
       RTLX.processSubtree(document.body, settings);
@@ -270,6 +282,7 @@
     // which is always chrome-safe.
     settings.contentSelector = messageSelector();
     applyCssVars();
+    applyForceMarker();
     hookHistory();
 
     // Initial pass over everything already on screen (the engine skips inputs).
@@ -297,6 +310,11 @@
               // Ignore our own injected toggle button — otherwise appending it
               // would schedule a redundant re-sweep.
               if (n.classList && n.classList.contains("rtlx-global-toggle")) return;
+              // Direct newly-inserted streamed content SYNCHRONOUSLY so a fresh
+              // <p>/<li> never paints in the page-default direction for a 200ms
+              // throttle cycle (the visible left↔right "flash"). The throttled
+              // pass below still re-checks it as it keeps growing.
+              try { RTLX.processSubtree(n, settings); } catch (e) {}
               schedule(n);
             } else if (n.nodeType === 3 && n.parentElement) {
               // Skip the toggle's own label text node (its repaint) so we never

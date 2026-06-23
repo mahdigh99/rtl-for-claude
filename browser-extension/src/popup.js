@@ -7,7 +7,7 @@
   const DEFAULTS = {
     enabled: true,
     mode: "ratio",
-    threshold: 0.3,
+    threshold: 0.1,
     fontEnabled: true,
     fontFamily: '"Vazirmatn RTLX", "Vazirmatn", Tahoma, sans-serif',
     fontScale: 1,

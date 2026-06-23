@@ -27,23 +27,26 @@
   if (!S.enabled) return;
 
   var FORCE = "data-rtlx-force";
-  var MSG = '[class*="message_"],[class*="userMessage_"]';
+  var MSG = '[class*="message_"],[class*="userMessage"]'; // userMessage_ (bubble) + userMessageContainer_
+  var QBOX = '[class*="questionsContainer"]'; // the AskUserQuestion box (options + radios)
   var BLOCK = "p,li,h1,h2,h3,h4,h5,h6,blockquote,td,dd,summary,figcaption";
   var INPUT = '[class*="inputContainer_"]';
   var RTL_RE = /[֐-ࣿיִ-﷿ﹰ-﻿]/;
   var globalForce = "auto"; // auto | rtl | ltr  (the floating button)
 
-  // Direction by RATIO, not first-strong: a paragraph that is mostly RTL stays
-  // RTL even when it opens with an English word (e.g. "dist/ ..."), which
-  // dir="auto" would wrongly flip to LTR.
+  // Streaming-stable direction WITHOUT any lock/memory: MEMORYLESS detection with
+  // a LOW threshold (0.1). A Persian answer's RTL share crosses 0.1 very early and
+  // never drops below it, so each paragraph turns RTL early and never flips — even
+  // though the webview re-creates the <p>/<li> per token (the re-created node sees
+  // the same accumulated text → the same decision). The toggle pins exact dir.
   var RTL_G = new RegExp(RTL_RE.source, "g");
   var LTR_G = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿḀ-ỿ]/g;
-  function detectDir(text) {
+  function dirByRatio(text, thr) {
     if (!text) return null;
-    var r = (text.match(RTL_G) || []).length;
-    var l = (text.match(LTR_G) || []).length;
-    if (!(r + l)) return null; // no strong letters → don't touch it
-    return r / (r + l) >= 0.3 ? "rtl" : "ltr";
+    var s = text.length > 600 ? text.slice(0, 600) : text;
+    var r = (s.match(RTL_G) || []).length, l = (s.match(LTR_G) || []).length;
+    if (!(r + l)) return null;
+    return r / (r + l) >= (thr || 0.1) ? "rtl" : "ltr";
   }
 
   // The compose box paints TRANSPARENT text in the contenteditable
@@ -70,38 +73,51 @@
     de.classList.toggle("rtlx-code-ltr", !!S.keepCodeLTR);
   }
 
-  function setDir(el, want) {
-    if (want === "auto") {
-      var d = detectDir(el.textContent || "");
-      if (d === null) return; // no strong letters yet — leave it untouched
-      want = d;
-    }
-    if (el.getAttribute("dir") !== want) el.setAttribute("dir", want); // self-heal
-    if (!el.classList.contains("rtlx-font")) el.classList.add("rtlx-font");
-  }
+  var SEEN = "data-rtlx-seen";
+  var FORCE_ALL = "data-rtlx-force-all";
 
-  function wantFor(container) {
-    if (globalForce === "rtl" || globalForce === "ltr") return globalForce;
-    var f = container.getAttribute(FORCE);
-    return f === "rtl" || f === "ltr" ? f : "auto";
-  }
-
-  function processMsg(msg) {
-    var want = wantFor(msg);
+  // We NEVER write dir/classes to the streamed paragraphs (the webview re-creates
+  // them per token and would wipe our changes → flicker). Instead we mark the
+  // STABLE message container with SEEN once it shows Persian, and CSS styles its
+  // prose descendants — current and any re-created one — with nothing to wipe.
+  function markSeen(msg) {
+    if (msg.hasAttribute(SEEN)) return;
+    var rtl = false;
     var blocks = msg.querySelectorAll(BLOCK);
     if (blocks.length) {
       for (var i = 0; i < blocks.length; i++) {
-        if (!blocks[i].closest("pre, code")) setDir(blocks[i], want);
+        var b = blocks[i];
+        if (b.closest("pre, code")) continue;
+        if (RTL_RE.test(b.textContent || "") && dirByRatio(b.textContent || "") === "rtl") { rtl = true; break; }
       }
-    } else if (!(msg.closest && msg.closest("pre, code"))) {
-      setDir(msg, want); // message with no block children of its own
+    } else if (RTL_RE.test(msg.textContent || "") && dirByRatio(msg.textContent || "") === "rtl") {
+      rtl = true;
     }
+    if (rtl) msg.setAttribute(SEEN, "1");
+  }
+
+  // SYNCHRONOUS + cheap: (re)assert the SEEN marker on every message. Runs inside
+  // the MutationObserver callback (a microtask, BEFORE the browser paints), so if
+  // the webview re-creates a message container mid-stream and drops our marker,
+  // the marker is back before the next paint → the message never flickers LTR.
+  // Once a message has SEEN, markSeen() short-circuits, so this stays cheap.
+  function ensureSeenAll() {
+    var msgs = document.querySelectorAll(MSG);
+    for (var i = 0; i < msgs.length; i++) markSeen(msgs[i]);
+    var q = document.querySelectorAll(QBOX); // AskUserQuestion boxes too
+    for (var j = 0; j < q.length; j++) markSeen(q[j]);
+  }
+
+  function processMsg(msg) {
+    markSeen(msg);
     addToggle(msg);
   }
 
   function sweep() {
     var msgs = document.querySelectorAll(MSG);
     for (var i = 0; i < msgs.length; i++) processMsg(msgs[i]);
+    var q = document.querySelectorAll(QBOX); // AskUserQuestion boxes
+    for (var j = 0; j < q.length; j++) markSeen(q[j]);
     if (S.applyToInput) {
       var ins = document.querySelectorAll(INPUT);
       for (var k = 0; k < ins.length; k++) applyInput(ins[k]);
@@ -154,8 +170,9 @@
       e.preventDefault();
       e.stopPropagation();
       globalForce = globalForce === "auto" ? "rtl" : globalForce === "rtl" ? "ltr" : "auto";
+      if (globalForce === "auto") de.removeAttribute(FORCE_ALL);
+      else de.setAttribute(FORCE_ALL, globalForce);
       gLabel();
-      sweep();
     });
     gLabel();
     document.body.appendChild(gEl);
@@ -180,7 +197,13 @@
       sweep();
     } catch (e) {}
     try {
-      new MutationObserver(schedule).observe(document.body, {
+      new MutationObserver(function () {
+        // Re-assert markers synchronously (before paint) so a re-created message
+        // container never loses RTL mid-stream; defer the heavier work (toggles,
+        // input) to the throttled sweep.
+        try { ensureSeenAll(); } catch (e) {}
+        schedule();
+      }).observe(document.body, {
         childList: true,
         subtree: true,
         characterData: true,

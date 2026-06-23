@@ -19,6 +19,81 @@
   font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;
 }
 
+/* ===========================================================================
+ * PRIMARY direction mechanism — marker on a STABLE node, never on the streamed
+ * paragraphs. The driver sets [data-rtlx-seen] on a message container (auto),
+ * [data-rtlx-force] on a message (per-message toggle) and [data-rtlx-force-all]
+ * on <html> (global toggle). CSS then styles every prose descendant — including
+ * paragraphs the webview re-creates per token — with nothing written to those
+ * volatile nodes, so the direction can never ping-pong (no "jumping").
+ * ========================================================================= */
+[data-rtlx-seen] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption),
+[data-rtlx-force-all="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption),
+[data-rtlx-force="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+  line-height: var(--rtlx-line-height, 1.85) !important;
+}
+[data-rtlx-force-all="ltr"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption),
+[data-rtlx-force="ltr"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
+  direction: ltr !important;
+  text-align: left !important;
+}
+/* Persian font on inner runs too, but never code (:where() = zero specificity). */
+[data-rtlx-seen] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) :where(:not(pre, code, kbd, samp)),
+[data-rtlx-force-all="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) :where(:not(pre, code, kbd, samp)),
+[data-rtlx-force="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) :where(:not(pre, code, kbd, samp)) {
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+}
+/* Code / preformatted stays LTR + monospace inside an RTL message. */
+[data-rtlx-seen] :is(pre, code, kbd, samp), [data-rtlx-seen] :is(pre, code) *,
+[data-rtlx-force-all="rtl"] :is(pre, code, kbd, samp), [data-rtlx-force-all="rtl"] :is(pre, code) *,
+[data-rtlx-force="rtl"] :is(pre, code, kbd, samp), [data-rtlx-force="rtl"] :is(pre, code) * {
+  direction: ltr !important;
+  text-align: left !important;
+}
+/* Inline LTR runs (links/inline-code/numbers) inside RTL prose stay put. */
+[data-rtlx-seen] :is(p, li, td, blockquote) :is(a, code, time, tt),
+[data-rtlx-force-all="rtl"] :is(p, li, td, blockquote) :is(a, code, time, tt),
+[data-rtlx-force="rtl"] :is(p, li, td, blockquote) :is(a, code, time, tt) {
+  unicode-bidi: isolate;
+}
+
+/* AskUserQuestion box ONLY: flip the whole box (set `direction` on the
+   container) so the option rows reverse and the radio/checkbox moves to the
+   RIGHT. We deliberately do NOT set `direction` on message_/userMessage_
+   containers — those are flex layouts and reversing them breaks the bubble
+   alignment. Message/table direction is handled by the prose+table rules above,
+   which only touch content elements, never the flex wrappers. */
+[class*="questionsContainer"][data-rtlx-seen],
+[data-rtlx-force-all="rtl"] [class*="questionsContainer"] {
+  direction: rtl !important;
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+}
+[class*="questionsContainer"][data-rtlx-seen] :is(pre, code, kbd, samp),
+[data-rtlx-force-all="rtl"] [class*="questionsContainer"] :is(pre, code, kbd, samp) {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+}
+
+/* User-message bubble. The user's text sits DIRECTLY inside .userMessage_
+   (display:inline-block, no <p>), so the prose rules never reach it. Setting
+   direction on the bubble is SAFE — it's inline-block, not a flex row — so the
+   text reads RTL. Its wrapper .userMessageContainer_ uses text-align:left to push
+   the bubble left; we only flip that text-align (NOT direction) so the bubble
+   sits on the right without reversing the flex layout. */
+[class*="userMessage_"][data-rtlx-seen],
+[data-rtlx-force-all="rtl"] [class*="userMessage_"] {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+}
+[class*="userMessageContainer"][data-rtlx-seen],
+[data-rtlx-force-all="rtl"] [class*="userMessageContainer"] {
+  text-align: right !important;
+}
+
 /* Make alignment follow the (native) resolved direction, beating any app rule.
    Only our stamped message blocks carry a dir attribute, so this is scoped. */
 [class*="message_"] [dir],
