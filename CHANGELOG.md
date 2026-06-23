@@ -3,7 +3,7 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension).
 This project follows [Semantic Versioning](https://semver.org).
 
-## [1.0.1] — 2026-06-23
+## [1.1.0] — 2026-06-23
 
 Major reliability pass for **streaming** answers and the Claude Code chat.
 

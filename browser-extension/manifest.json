@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RTL for Claude",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Persian, Arabic, Urdu & every RTL language, finally readable in Claude, ChatGPT & Gemini. Vazirmatn font. 100% local.",
   "browser_specific_settings": {
     "gecko": {
