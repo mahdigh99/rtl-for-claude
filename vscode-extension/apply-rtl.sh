@@ -49,6 +49,7 @@ fi
 # Insiders, Cursor and Windsurf (by locating each index.css).
 find_targets() {
   local roots=(
+    "$HOME/.antigravity-ide/extensions"
     "$HOME/.vscode/extensions"
     "$HOME/.vscode-insiders/extensions"
     "$HOME/.cursor/extensions"
