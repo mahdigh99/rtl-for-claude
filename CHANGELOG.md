@@ -16,6 +16,14 @@ This project follows [Semantic Versioning](https://semver.org).
   the Claude Code patcher, plus Antigravity IDE support in both installers
   (thanks @HuAliAsu).
 
+### Changed
+
+- Claude Code (VS Code): the global direction toggle now **docks into the panel's
+  top toolbar**, next to the New session / Session history icons, instead of
+  floating over the composer and the send button. It anchors on those buttons'
+  stable `aria-label`s and automatically falls back to the (now bottom-left)
+  floating pill if that toolbar isn't present, so the control never disappears.
+
 ### Fixed
 
 - A Persian paragraph that **starts with an English word** ("authorization

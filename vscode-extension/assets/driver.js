@@ -153,19 +153,58 @@
     msg.appendChild(b);
   }
 
-  // --- global floating toggle (flip the whole chat, no reload) --------------
+  // --- global direction toggle (flip the whole chat, no reload) -------------
+  // Preferred home is the panel's top toolbar, right beside the New session /
+  // Session history icons — those buttons expose STABLE aria-labels, unlike the
+  // hashed CSS-module classes everywhere else. If that toolbar is not present
+  // (older/newer build, or not rendered yet) we fall back to a floating pill so
+  // the control never disappears. Docking is re-checked every sweep, so if the
+  // toolbar mounts late — or React re-creates it and drops our button — we slot
+  // back in on the next tick.
   var gEl = null;
   function gLabel() {
     if (!gEl) return;
-    gEl.textContent = globalForce === "rtl" ? "⇥ RTL" : globalForce === "ltr" ? "⇤ LTR" : "⇌ Auto";
+    // Icons-only when docked in the toolbar (tight space); labelled when floating.
+    var docked = gEl.dataset.dock === "top";
+    gEl.textContent = globalForce === "rtl"
+      ? (docked ? "⇥" : "⇥ RTL")
+      : globalForce === "ltr"
+        ? (docked ? "⇤" : "⇤ LTR")
+        : (docked ? "⇌" : "⇌ Auto");
     gEl.dataset.state = globalForce;
   }
+  function toolbarAnchor() {
+    // The Session-history / New-session icon buttons live in the top toolbar.
+    return (
+      document.querySelector('button[aria-label="Session history"]') ||
+      document.querySelector('button[aria-label="New session"]')
+    );
+  }
+  function placeToggle() {
+    var anchor = toolbarAnchor();
+    if (anchor && anchor.parentNode) {
+      // Dock as the anchor's sibling so it sits inline with the toolbar icons.
+      if (gEl.parentNode !== anchor.parentNode || gEl.dataset.dock !== "top") {
+        anchor.parentNode.insertBefore(gEl, anchor.nextSibling);
+        gEl.dataset.dock = "top";
+        gLabel(); // switch to the compact icon-only label
+      }
+    } else if (gEl.dataset.dock !== "float") {
+      document.body.appendChild(gEl);
+      gEl.dataset.dock = "float";
+      gLabel();
+    }
+  }
   function ensureGlobalToggle() {
-    if (gEl && document.body.contains(gEl)) return;
+    if (gEl && gEl.isConnected) {
+      placeToggle();
+      return;
+    }
     gEl = document.createElement("button");
     gEl.id = "rtlx-global";
     gEl.type = "button";
     gEl.title = "Flip the whole chat: Auto → RTL → LTR";
+    gEl.dataset.dock = "float";
     gEl.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -175,7 +214,8 @@
       gLabel();
     });
     gLabel();
-    document.body.appendChild(gEl);
+    document.body.appendChild(gEl); // provisional; placeToggle may dock it
+    placeToggle();
   }
 
   // --- throttled observer ----------------------------------------------------

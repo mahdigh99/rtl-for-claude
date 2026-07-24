@@ -194,31 +194,65 @@
   border-color: rgba(217, 119, 87, 0.5);
 }
 
-/* --- global floating toggle (flip the whole chat, no reload) -------------- */
+/* --- global direction toggle (flip the whole chat, no reload) ------------- */
+/* Base styling shared by both homes. `direction: ltr` keeps the ⇌/RTL/LTR glyph
+   order stable regardless of the page direction. */
 #rtlx-global {
+  cursor: pointer;
+  direction: ltr;
+  font: 600 11px/1 system-ui, -apple-system, Segoe UI, sans-serif;
+  transition: opacity 0.15s ease, transform 0.1s ease, background 0.15s ease;
+}
+#rtlx-global:active { transform: scale(0.96); }
+
+/* DOCKED: inline in the panel's top toolbar, next to New session / Session
+   history. Styled to read as one of those icon buttons — compact, square-ish,
+   transparent until hover — so it never covers the composer or send button. */
+#rtlx-global[data-dock="top"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  min-width: 24px;
+  height: 24px;
+  margin: 0 2px;
+  padding: 0 6px;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.14);
+  border: 1px solid rgba(128, 128, 128, 0.22);
+  border-radius: 6px;
+  opacity: 0.75;
+}
+#rtlx-global[data-dock="top"]:hover { opacity: 1; background: rgba(128, 128, 128, 0.28); }
+#rtlx-global[data-dock="top"][data-state="rtl"],
+#rtlx-global[data-dock="top"][data-state="ltr"] {
+  opacity: 1;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--app-claude-orange, #d97757);
+  border-color: transparent;
+}
+
+/* FLOATING fallback: only used when the top toolbar isn't found. Moved to the
+   bottom-LEFT so it clears Claude's send button and model picker (bottom-right). */
+#rtlx-global[data-dock="float"] {
   position: fixed;
   bottom: 14px;
-  inset-inline-end: 16px;
+  inset-inline-start: 16px;
   z-index: 2147483600;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   height: 26px;
   padding: 0 11px;
-  font: 600 11px/1 system-ui, -apple-system, Segoe UI, sans-serif;
   color: var(--vscode-button-foreground, #fff);
   background: var(--vscode-button-background, #d97757);
   border: none;
   border-radius: 999px;
-  cursor: pointer;
   opacity: 0.55;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
-  transition: opacity 0.15s ease, transform 0.1s ease;
-  direction: ltr;
 }
-#rtlx-global:hover { opacity: 1; }
-#rtlx-global:active { transform: scale(0.96); }
-#rtlx-global[data-state="auto"] {
+#rtlx-global[data-dock="float"]:hover { opacity: 1; }
+#rtlx-global[data-dock="float"][data-state="auto"] {
   background: var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.5));
   color: var(--vscode-button-secondaryForeground, inherit);
 }
