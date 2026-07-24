@@ -68,6 +68,22 @@
 بدونِ نصب: `bash vscode-extension/apply-rtl.sh`. راهنمای کامل:
 [vscode-extension/README.md](vscode-extension/README.md).
 
+**VS Code — Codex**
+
+برای پنل Codex از patcher مستقل آن استفاده کن:
+
+```bash
+bash vscode-extension-codex/apply-rtl.sh
+```
+
+بعد **Developer: Reload Window** را اجرا کن. پس از هر به‌روزرسانی Codex، این
+دستور را دوباره اجرا کن. برای برگرداندن ظاهر اصلی:
+`bash vscode-extension-codex/apply-rtl.sh --remove`.
+
+نام محصول در Marketplace اکنون **Codex** است، ولی شناسهٔ فنی پوشهٔ نصب‌شده
+همچنان `openai.chatgpt` باقی مانده است. راهنمای کامل:
+[vscode-extension-codex/README.md](vscode-extension-codex/README.md).
+
 ## 🎛️ به سلیقه‌ی خودت
 
 روی آیکن نوار ابزار بزن و همه‌چیز را همان‌طور که دوست داری تنظیم کن: حساسیت تشخیص، فونت، اندازه‌ی متن، فاصله‌ی خط‌ها، کلید جهت روی هر پیام، و این‌که افزونه روی کدام سایت‌ها فعال باشد.
