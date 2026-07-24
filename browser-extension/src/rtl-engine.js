@@ -154,6 +154,8 @@
         let c = null;
         try { c = el.closest(sel); } catch (e) {}
         if (c) return c;
+        // If contentSelector is defined but we are outside of it, do not process
+        return null;
       }
     }
     let node = el.parentElement, hops = 0;
