@@ -54,6 +54,11 @@ html[data-rtlx-force-all="ltr"] body {
 [data-rtlx-force-all="rtl"] [class*="_tableHeaderCell_"] {
   direction: rtl !important;
   text-align: right !important;
+  /* Pin the base direction to `direction` rather than the first strong
+     character. Codex only uses `unicode-bidi: plaintext` on file-path and diff
+     spans today, but a future bundle applying it to prose would otherwise make
+     a paragraph that opens with an English word resolve to an LTR base. */
+  unicode-bidi: isolate !important;
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
   line-height: var(--rtlx-line-height, 1.85) !important;
   font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;

@@ -18,6 +18,14 @@ This project follows [Semantic Versioning](https://semver.org).
 
 ### Fixed
 
+- A Persian paragraph that **starts with an English word** ("authorization
+  اصلاً …") no longer renders left-to-right with that word pushed to the visual
+  end of the sentence. Claude marks prose with `unicode-bidi: plaintext`, which
+  derives the base direction from the first strong character and ignores
+  `direction`; the direction rules now pin `unicode-bidi: isolate` so the chosen
+  direction wins. The same bug made the global **LTR** toggle a no-op on
+  Persian-leading paragraphs. Covered by a new rendered-geometry regression
+  test (`browser-extension/tests/bidi-layout.test.js`).
 - Browser extension: on known sites, auto-detection no longer leaks RTL
   styling outside the chat messages (file previews, code and Markdown tabs)
   — the global toggle still pins the whole page when you want everything RTL

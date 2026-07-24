@@ -83,6 +83,14 @@
 [data-rtlx-force-all="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
   direction: rtl !important;
   text-align: right !important;
+  /* Claude ships `unicode-bidi: plaintext` on exactly these tags, which makes
+     the browser take each paragraph's base direction from its FIRST STRONG
+     character and IGNORE `direction` entirely. A Persian paragraph opening with
+     an English word ("authorization اصلاً …") therefore resolved to an LTR base
+     and rendered that word at the far left — visually the end of the sentence.
+     Restoring `isolate` (the HTML default for these tags) makes `direction`
+     authoritative again. */
+  unicode-bidi: isolate !important;
   font-family: var(--rtlx-font-stack) !important;
   line-height: var(--rtlx-line-height) !important;
   letter-spacing: var(--rtlx-letter-spacing) !important;
@@ -90,6 +98,7 @@
 [data-rtlx-force-all="ltr"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
   direction: ltr !important;
   text-align: left !important;
+  unicode-bidi: isolate !important;
 }
 /* Persian font on inner runs too (sites set font on bold/links/spans). :where()
    keeps specificity 0 so the monospace reset below still wins inside code. */

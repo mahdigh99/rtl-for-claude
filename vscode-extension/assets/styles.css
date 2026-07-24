@@ -32,6 +32,14 @@
 [data-rtlx-force="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
   direction: rtl !important;
   text-align: right !important;
+  /* The webview bundle ships `unicode-bidi: plaintext` on exactly these tags,
+     which makes the browser take each paragraph's base direction from its FIRST
+     STRONG character and IGNORE `direction` entirely. A Persian paragraph
+     opening with an English word ("authorization اصلاً …") therefore resolved to
+     an LTR base and rendered that word at the far left — visually the end of the
+     sentence. Restoring `isolate` (the HTML default for these tags) makes
+     `direction` authoritative again. */
+  unicode-bidi: isolate !important;
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
   line-height: var(--rtlx-line-height, 1.85) !important;
 }
@@ -39,6 +47,7 @@
 [data-rtlx-force="ltr"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
   direction: ltr !important;
   text-align: left !important;
+  unicode-bidi: isolate !important;
 }
 /* Persian font on inner runs too, but never code (:where() = zero specificity). */
 [data-rtlx-seen] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) :where(:not(pre, code, kbd, samp)),
