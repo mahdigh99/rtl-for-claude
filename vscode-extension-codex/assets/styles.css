@@ -1,3 +1,4 @@
+/* fallow-ignore-file unused-file -- copied into the Codex webview by apply-rtl.sh */
 /* ============================================================================
  * RTL for Codex (VS Code) — webview styles.
  *
@@ -25,30 +26,14 @@ html[data-rtlx-force-all="ltr"] body {
   text-align: left !important;
 }
 
-/* --- generic RTL marker ---------------------------------------------------- */
-.rtlx-rtl {
-  direction: rtl !important;
-  text-align: right !important;
-  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
-  line-height: var(--rtlx-line-height, 1.85) !important;
-  font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;
-}
-
-/* --- user messages --------------------------------------------------------- */
+/* --- RTL prose surfaces ---------------------------------------------------- */
+.rtlx-rtl,
 .rtlx-rtl.text-size-chat.min-w-0.font-medium.break-words.text-token-foreground,
 .rtlx-rtl.text-size-chat.mt-2.whitespace-pre-wrap.text-token-foreground,
 [data-rtlx-user-rtl] .text-size-chat.min-w-0.font-medium.break-words.text-token-foreground,
 [data-rtlx-user-rtl] .text-size-chat.mt-2.whitespace-pre-wrap.text-token-foreground,
 [data-rtlx-force-all="rtl"] .text-size-chat.min-w-0.font-medium.break-words.text-token-foreground,
-[data-rtlx-force-all="rtl"] .text-size-chat.mt-2.whitespace-pre-wrap.text-token-foreground {
-  direction: rtl !important;
-  text-align: right !important;
-  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
-  line-height: var(--rtlx-line-height, 1.85) !important;
-  font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;
-}
-
-/* --- assistant markdown blocks -------------------------------------------- */
+[data-rtlx-force-all="rtl"] .text-size-chat.mt-2.whitespace-pre-wrap.text-token-foreground,
 .rtlx-rtl[class*="_markdownContent_"],
 .rtlx-rtl[class*="_paragraph_"],
 .rtlx-rtl[class*="_markdownBlock_"],

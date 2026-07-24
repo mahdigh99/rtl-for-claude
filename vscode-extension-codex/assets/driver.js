@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- copied into the Codex webview by apply-rtl.sh
 /* ============================================================================
  * RTL for Codex (VS Code) — webview driver.
  *
@@ -9,6 +10,7 @@
  *
  * Config comes from window.__RTLX_SETTINGS (optional). Defaults are below.
  * ========================================================================== */
+// fallow-ignore-next-line complexity -- self-contained webview runtime entrypoint
 ;(function () {
   "use strict";
   if (window.__rtlCodex) return;
@@ -37,6 +39,7 @@
     }
   }
 
+  // fallow-ignore-next-line complexity -- compact Unicode ratio calculation
   function dirByRatio(text, thr) {
     if (!text) return null;
     var s = text.length > 600 ? text.slice(0, 600) : text;
@@ -72,6 +75,7 @@
   ];
 
   function markUserMessages() {
+    // fallow-ignore-next-line complexity -- DOM guards keep virtualized message variants safe
     USER_TEXT_SELS.forEach(function (sel) {
       var nodes = document.querySelectorAll(sel);
       for (var i = 0; i < nodes.length; i++) {
@@ -102,6 +106,7 @@
     "[class*='_tableHeaderCell_']",
   ];
 
+  // fallow-ignore-next-line complexity -- handles multiple Codex Markdown surfaces
   function markAssistantMarkdown() {
     var nodes = document.querySelectorAll(MD_BLOCK_SELS.join(","));
     for (var i = 0; i < nodes.length; i++) {
@@ -119,6 +124,7 @@
   }
 
   // ---- composer input -------------------------------------------------------
+  // fallow-ignore-next-line complexity -- composer state requires independent guards
   function applyInputDirection() {
     if (!S.applyToInput) return;
     var inputs = document.querySelectorAll("textarea[data-autoresize]");
