@@ -56,6 +56,53 @@ find_targets() {
   done
 }
 
+# Remove any previous marked patch block from the HTML, in place. Scans the
+# whole file as one string (not line-by-line) because the bundled index.html
+# may be minified onto a single line.
+strip_html_patch() {
+  local html="$1"
+  local endnl=1
+  [ -z "$(tail -c 1 "$html")" ] || endnl=0  # 0 = no trailing newline, keep it that way
+  awk -v b="$BEGIN_MARK" -v e="$END_MARK" -v endnl="$endnl" '
+    { txt = txt $0 "\n" }
+    END {
+      while ((i = index(txt, b)) > 0) {
+        rest = substr(txt, i)
+        j = index(rest, e)
+        if (j == 0) break
+        tail = substr(rest, j + length(e))
+        while (substr(tail, 1, 1) == "\n") tail = substr(tail, 2)
+        txt = substr(txt, 1, i - 1) tail
+      }
+      if (!endnl) sub(/\n$/, "", txt)
+      printf "%s", txt
+    }
+  ' "$html" > "$html.tmp" && mv "$html.tmp" "$html"
+}
+
+# Insert the marked <link> + <script> block before </head>, in place
+# (appended at the end if the file has no </head>).
+inject_html_patch() {
+  local html="$1"
+  local endnl=1
+  [ -z "$(tail -c 1 "$html")" ] || endnl=0
+  awk -v b="$BEGIN_MARK" -v e="$END_MARK" -v styles="$ASSET_STYLES" -v driver="$ASSET_DRIVER" -v endnl="$endnl" '
+    { txt = txt $0 "\n" }
+    END {
+      block = b "\n<link rel=\"stylesheet\" href=\"./assets/" styles "\">\n<script src=\"./assets/" driver "\"></script>\n" e "\n"
+      i = index(txt, "</head>")
+      if (i > 0) {
+        txt = substr(txt, 1, i - 1) block substr(txt, i)
+        if (!endnl) sub(/\n$/, "", txt)
+      } else {
+        sub(/\n+$/, "", txt)
+        txt = txt "\n" block
+      }
+      printf "%s", txt
+    }
+  ' "$html" > "$html.tmp" && mv "$html.tmp" "$html"
+}
+
 patch_one() {
   local html="$1"
   local dir; dir="$(dirname "$html")"
@@ -68,43 +115,12 @@ patch_one() {
   cp "$FONT_SRC" "$assets/$ASSET_FONT"
 
   # First strip any previous patch so the backup is the pristine HTML.
-  python3 - "$html" "$BEGIN_MARK" "$END_MARK" <<'PY'
-import sys
-html_path, begin, end = sys.argv[1:4]
-with open(html_path, 'r', encoding='utf-8') as f:
-    text = f.read()
-start = text.find(begin)
-while start != -1:
-    stop = text.find(end, start)
-    if stop == -1:
-        text = text[:start]
-        break
-    stop += len(end)
-    while stop < len(text) and text[stop] == '\n':
-        stop += 1
-    text = text[:start] + text[stop:]
-    start = text.find(begin)
-with open(html_path, 'w', encoding='utf-8') as f:
-    f.write(text)
-PY
+  strip_html_patch "$html"
 
   # Backup the pristine file.
   cp "$html" "$html.rtl-backup"
 
-  # Patch the HTML with a Python helper (handles multi-line insertion safely).
-  python3 - "$html" "$BEGIN_MARK" "$END_MARK" "$ASSET_STYLES" "$ASSET_DRIVER" <<'PY'
-import sys
-html_path, begin, end, styles, driver = sys.argv[1:6]
-with open(html_path, 'r', encoding='utf-8') as f:
-    text = f.read()
-block = f'{begin}\n<link rel="stylesheet" href="./assets/{styles}">\n<script src="./assets/{driver}"></script>\n{end}\n'
-if '</head>' in text:
-    text = text.replace('</head>', block + '</head>', 1)
-else:
-    text = text.rstrip() + '\n' + block
-with open(html_path, 'w', encoding='utf-8') as f:
-    f.write(text)
-PY
+  inject_html_patch "$html"
   echo "  patched: $dir"
 }
 
@@ -117,25 +133,7 @@ unpatch_one() {
     cp "$html.rtl-backup" "$html"
     rm -f "$html.rtl-backup"
   else
-    python3 - "$html" "$BEGIN_MARK" "$END_MARK" <<'PY'
-import sys
-html_path, begin, end = sys.argv[1:4]
-with open(html_path, 'r', encoding='utf-8') as f:
-    text = f.read()
-start = text.find(begin)
-while start != -1:
-    stop = text.find(end, start)
-    if stop == -1:
-        text = text[:start]
-        break
-    stop += len(end)
-    while stop < len(text) and text[stop] == '\n':
-        stop += 1
-    text = text[:start] + text[stop:]
-    start = text.find(begin)
-with open(html_path, 'w', encoding='utf-8') as f:
-    f.write(text)
-PY
+    strip_html_patch "$html"
   fi
 
   rm -f "$assets/$ASSET_STYLES" "$assets/$ASSET_DRIVER" "$assets/$ASSET_FONT"

@@ -49,6 +49,13 @@
     return r / (r + l) >= (thr || 0.1) ? "rtl" : "ltr";
   }
 
+  // Forcing LTR must also drop the auto-detected RTL marks, otherwise the
+  // per-message !important rules keep winning over the global toggle.
+  function detectRtl(text) {
+    if (globalForce === "ltr") return false;
+    return RTL_RE.test(text) && dirByRatio(text) === "rtl";
+  }
+
   function isCodeBlock(el) {
     return (
       el.closest("pre, code, kbd, samp, .rtlx-code, [class*='codeBlock'], [class*='CodeBlock']") !== null
@@ -82,7 +89,7 @@
         var el = nodes[i];
         if (isCodeBlock(el)) continue;
         var text = el.textContent || "";
-        var rtl = RTL_RE.test(text) && dirByRatio(text) === "rtl";
+        var rtl = detectRtl(text);
         el.classList.toggle("rtlx-rtl", rtl);
         // Mark a stable ancestor for CSS scoping.
         var turn = el.closest("[data-virtualized-turn-content]");
@@ -114,7 +121,7 @@
       if (isCodeBlock(el)) continue;
       if (isMediaParagraph(el)) continue;
       var text = el.textContent || "";
-      var rtl = RTL_RE.test(text) && dirByRatio(text) === "rtl";
+      var rtl = detectRtl(text);
       el.classList.toggle("rtlx-rtl", rtl);
       if (rtl) {
         var turn = el.closest("[data-virtualized-turn-content]");
@@ -132,7 +139,7 @@
       var ta = inputs[i];
       var text = ta.value || "";
       var hasText = /\S/.test(text);
-      var rtl = RTL_RE.test(text) && dirByRatio(text) === "rtl";
+      var rtl = detectRtl(text);
       ta.classList.toggle("rtlx-input-rtl", rtl);
       ta.classList.toggle("rtlx-input-ltr", !rtl && hasText);
     }
@@ -161,6 +168,7 @@
       if (globalForce === "auto") de.removeAttribute("data-rtlx-force-all");
       else de.setAttribute("data-rtlx-force-all", globalForce);
       gLabel();
+      sweep();
     });
     gLabel();
     document.body.appendChild(gEl);

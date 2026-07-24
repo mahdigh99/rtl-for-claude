@@ -66,9 +66,11 @@ html[data-rtlx-force-all="ltr"] body {
   text-align: left !important;
 }
 
-/* --- nested inline runs inside RTL blocks ---------------------------------- */
-.rtlx-rtl :where(:not(pre, code, kbd, samp)),
-[data-rtlx-force-all="rtl"] :is([class*="_markdownContent_"], [class*="_paragraph_"], [class*="_markdownBlock_"], [class*="_heading_"], [class*="_list_"], [class*="_listItem_"], [class*="_blockquote_"], [class*="_tableCell_"], [class*="_tableHeaderCell_"]) :where(:not(pre, code, kbd, samp)) {
+/* --- nested inline runs inside RTL blocks ----------------------------------
+   Also excludes descendants of pre/code (`pre *` …) so syntax-highlight
+   spans inside code blocks keep their monospace font. */
+.rtlx-rtl :where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)),
+[data-rtlx-force-all="rtl"] :is([class*="_markdownContent_"], [class*="_paragraph_"], [class*="_markdownBlock_"], [class*="_heading_"], [class*="_list_"], [class*="_listItem_"], [class*="_blockquote_"], [class*="_tableCell_"], [class*="_tableHeaderCell_"]) :where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)) {
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
 }
 

@@ -68,6 +68,21 @@
 بدون تثبيت: `bash vscode-extension/apply-rtl.sh`. الدليل الكامل:
 [vscode-extension/README.md](vscode-extension/README.md).
 
+**VS Code — Codex**
+
+للوحة Codex استخدم أداة الترقيع المستقلة الخاصة بها:
+
+```bash
+bash vscode-extension-codex/apply-rtl.sh
+```
+
+ثم نفّذ **Developer: Reload Window**. أعد تشغيل الأمر بعد كل تحديث لـ Codex.
+لاستعادة المظهر الأصلي: `bash vscode-extension-codex/apply-rtl.sh --remove`.
+
+اسم المنتج في الـ Marketplace الآن هو **Codex**، لكن المعرّف التقني لمجلد
+التثبيت ما يزال `openai.chatgpt`. الدليل الكامل:
+[vscode-extension-codex/README.md](vscode-extension-codex/README.md).
+
 ## 🎛️ على ذوقك أنت
 
 اضغط أيقونة شريط الأدوات لتضبط حساسية الاكتشاف، والخط، وحجم النص، وتباعد الأسطر، وزر كل رسالة، والمواقع التي تشتغل عليها.

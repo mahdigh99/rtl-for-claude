@@ -68,6 +68,22 @@ Claude کے جواب کمال کے ہوتے ہیں، مگر اردو لکھتے 
 بغیر انسٹال: `bash vscode-extension/apply-rtl.sh`۔ مکمل گائیڈ:
 [vscode-extension/README.md](vscode-extension/README.md)۔
 
+**VS Code — Codex**
+
+Codex پینل کے لیے اس کا الگ patcher استعمال کریں:
+
+```bash
+bash vscode-extension-codex/apply-rtl.sh
+```
+
+پھر **Developer: Reload Window** چلائیں۔ Codex کی ہر اپڈیٹ کے بعد یہ کمانڈ
+دوبارہ چلائیں۔ اصل شکل واپس لانے کے لیے:
+`bash vscode-extension-codex/apply-rtl.sh --remove`۔
+
+Marketplace میں پروڈکٹ کا نام اب **Codex** ہے، مگر انسٹال شدہ فولڈر کا
+تکنیکی شناختی نام اب بھی `openai.chatgpt` ہی ہے۔ مکمل گائیڈ:
+[vscode-extension-codex/README.md](vscode-extension-codex/README.md)۔
+
 ## 🎛️ اپنی مرضی کے مطابق
 
 ٹول بار کے آئیکن پر کلک کریں اور سب کچھ خود طے کریں — پہچان کی حساسیت، فونٹ، متن کا سائز، سطروں کا فاصلہ، ہر پیغام والا ٹوگل اور یہ بھی کہ کن کن سائٹس پر یہ چلے۔
