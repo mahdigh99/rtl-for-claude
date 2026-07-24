@@ -36,9 +36,11 @@ function Get-Targets {
     $targets = @()
     foreach ($r in $roots) {
         if (Test-Path $r) {
-            $found = Get-ChildItem -Path $r -Filter "index.css" -Recurse -ErrorAction SilentlyContinue | 
+            $found = Get-ChildItem -Path $r -Filter "index.css" -Recurse -ErrorAction SilentlyContinue |
                 Where-StylePath
-            $targets += $found
+            # An empty pipeline yields $null; appending it would add a null
+            # element and defeat the "no targets found" check below.
+            if ($found) { $targets += @($found) }
         }
     }
     return $targets
