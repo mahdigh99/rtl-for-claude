@@ -3,6 +3,22 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension).
 This project follows [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+
+- Standalone RTL support for the Codex VS Code extension, including automatic
+  paragraph direction, live composer direction, Vazirmatn typography, and a
+  global Auto / RTL / LTR toggle.
+- Reversible, idempotent installation for Codex with a pristine webview backup
+  and a temporary-home lifecycle test.
+
+### Compatibility
+
+- Codex code blocks and preformatted content remain left-to-right.
+- The current Codex Marketplace product still installs under the technical
+  extension identifier `openai.chatgpt`.
+
 ## [1.1.0] — 2026-06-23
 
 Major reliability pass for **streaming** answers and the Claude Code chat.

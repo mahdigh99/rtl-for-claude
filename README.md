@@ -66,6 +66,21 @@ Or install the **`.vsix`** — download `rtl-for-claude-vscode-*.vsix` from
 No-install alternative: `bash vscode-extension/apply-rtl.sh`. Full guide:
 [vscode-extension/README.md](vscode-extension/README.md).
 
+**VS Code — Codex**
+
+The Codex extension uses a separate webview patcher. From this repository, run:
+
+```bash
+bash vscode-extension-codex/apply-rtl.sh
+```
+
+Then run **Developer: Reload Window**. Re-run the patcher after Codex updates.
+To restore the original Codex webview, run
+`bash vscode-extension-codex/apply-rtl.sh --remove`. The Marketplace product is
+named Codex, although its installed extension identifier remains
+`openai.chatgpt`. Full guide:
+[vscode-extension-codex/README.md](vscode-extension-codex/README.md).
+
 ## 🎛️ Make it yours
 
 Click the toolbar icon to fine-tune detection sensitivity, font, text size,
