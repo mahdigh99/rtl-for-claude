@@ -122,11 +122,18 @@
           "enum": [
             "Vazirmatn",
             "Sahel",
-            "System default"
+            "System default",
+            "Custom"
           ],
           "default": "Vazirmatn",
           "order": 2,
-          "description": "Font used for right-to-left text."
+          "description": "Font used for right-to-left text. Pick \"Custom\" to use your own font (set it in Custom font family)."
+        },
+        "rtlForClaude.font.custom": {
+          "type": "string",
+          "default": "",
+          "order": 2.5,
+          "markdownDescription": "Your own font family name (used only when Font is set to **Custom**), e.g. `Estedad` or `IRANSans`. The font must be installed on your system. Vazirmatn is kept as a fallback."
         },
         "rtlForClaude.font.scale": {
           "type": "number",
@@ -183,6 +190,22 @@
           "default": true,
           "order": 9,
           "description": "Keep code blocks, diffs and terminals left-to-right."
+        },
+        "rtlForClaude.togglePlacement": {
+          "type": "string",
+          "enum": [
+            "toolbar",
+            "floating",
+            "hidden"
+          ],
+          "enumDescriptions": [
+            "Dock the Auto/RTL/LTR button in the panel's top toolbar, next to New session / Session history.",
+            "Show it as a floating pill in the bottom corner of the chat.",
+            "Hide it — control direction from settings or the per-message toggles instead."
+          ],
+          "default": "toolbar",
+          "order": 10,
+          "description": "Where the whole-chat direction button lives."
         }
       }
     }

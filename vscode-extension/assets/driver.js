@@ -21,6 +21,7 @@
       applyToInput: true,
       showToggles: true,
       keepCodeLTR: true,
+      togglePlacement: "toolbar", // toolbar | floating | hidden
     },
     window.__RTLX_SETTINGS || {}
   );
@@ -181,6 +182,15 @@
     );
   }
   function placeToggle() {
+    // "floating" pins the pill to the corner; only "toolbar" tries to dock.
+    if (S.togglePlacement === "floating") {
+      if (gEl.dataset.dock !== "float") {
+        document.body.appendChild(gEl);
+        gEl.dataset.dock = "float";
+        gLabel();
+      }
+      return;
+    }
     var anchor = toolbarAnchor();
     if (anchor && anchor.parentNode) {
       // Dock as the anchor's sibling so it sits inline with the toolbar icons.
@@ -196,6 +206,10 @@
     }
   }
   function ensureGlobalToggle() {
+    if (S.togglePlacement === "hidden") {
+      if (gEl) { gEl.remove(); gEl = null; }
+      return;
+    }
     if (gEl && gEl.isConnected) {
       placeToggle();
       return;

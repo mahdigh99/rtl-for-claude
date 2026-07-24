@@ -16,6 +16,15 @@ This project follows [Semantic Versioning](https://semver.org).
   the Claude Code patcher, plus Antigravity IDE support in both installers
   (thanks @HuAliAsu).
 
+### Added
+
+- **Direction-button placement setting** (`rtlForClaude.togglePlacement`): choose
+  Top toolbar (default), Floating, or Hidden for the whole-chat Auto/RTL/LTR
+  button — from the sidebar panel or VS Code settings.
+- **Custom font**: pick "Custom" as the font and enter your own family name
+  (`rtlForClaude.font.custom`, e.g. `Estedad`, `IRANSans`). Vazirmatn stays as a
+  fallback; the name is sanitised before it reaches the stylesheet.
+
 ### Changed
 
 - Claude Code (VS Code): the global direction toggle now **docks into the panel's
@@ -25,6 +34,11 @@ This project follows [Semantic Versioning](https://semver.org).
   floating pill if that toolbar isn't present, so the control never disappears.
 
 ### Fixed
+
+- Settings panel is now responsive: on a narrow sidebar the font/detection
+  dropdowns and sliders no longer overflow off-screen (rows wrap), and the
+  on/off toggle knobs no longer spill outside their track (the switches keep
+  their size instead of being squeezed).
 
 - A Persian paragraph that **starts with an English word** ("authorization
   اصلاً …") no longer renders left-to-right with that word pushed to the visual

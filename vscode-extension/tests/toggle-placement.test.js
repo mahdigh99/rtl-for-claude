@@ -30,7 +30,8 @@ if (!chrome) {
 const css = path.join(__dirname, "../assets/styles.css");
 const driver = path.join(__dirname, "../assets/driver.js");
 
-const page = `<meta charset="utf-8">
+// `placement` is injected via __RTLX_SETTINGS, exactly as the extension does it.
+const pageFor = (settings) => `<meta charset="utf-8">
 <link rel="stylesheet" href="file://${css}">
 <style>
   body { margin: 0; font: 13px system-ui; }
@@ -43,77 +44,96 @@ const page = `<meta charset="utf-8">
   </div>
 </div>
 <pre id="result"></pre>
-<script>window.__RTLX_SETTINGS = { enabled: true };</script>
+<script>window.__RTLX_SETTINGS = ${JSON.stringify(settings)};</script>
 <script src="file://${driver}"></script>
 <script>
 const out = [];
 const g = () => document.getElementById("rtlx-global");
+const MODE = ${JSON.stringify(settings.togglePlacement || "toolbar")};
 setTimeout(() => {
   const btn = g();
+  if (MODE === "hidden") {
+    out.push((!btn ? "ok   " : "FAIL ") + "hidden: no button created");
+    document.getElementById("result").textContent = out.join("\\n");
+    return;
+  }
+  if (MODE === "floating") {
+    const floated = btn && btn.dataset.dock === "float";
+    out.push((floated ? "ok   " : "FAIL ") + "floating: stays a floating pill (dock=" + (btn && btn.dataset.dock) + ")");
+    btn.click();
+    out.push((document.documentElement.getAttribute("data-rtlx-force-all") === "rtl" ? "ok   " : "FAIL ") + "floating: click cycles to rtl");
+    document.getElementById("result").textContent = out.join("\\n");
+    return;
+  }
+  // default: toolbar
   const hist = document.querySelector('button[aria-label="Session history"]');
   const docked = btn && btn.dataset.dock === "top" && btn.parentNode === hist.parentNode;
-  out.push((docked ? "ok   " : "FAIL ") + "docks into top toolbar (dock=" + (btn && btn.dataset.dock) + ")");
-
-  const compact = btn && btn.textContent.trim() === "\\u21cc";
-  out.push((compact ? "ok   " : "FAIL ") + "compact icon label when docked");
-
+  out.push((docked ? "ok   " : "FAIL ") + "toolbar: docks into top toolbar (dock=" + (btn && btn.dataset.dock) + ")");
+  out.push((btn && btn.textContent.trim() === "\\u21cc" ? "ok   " : "FAIL ") + "toolbar: compact icon label when docked");
   btn.click();
-  const rtl = document.documentElement.getAttribute("data-rtlx-force-all") === "rtl";
-  out.push((rtl ? "ok   " : "FAIL ") + "click cycles to force-all=rtl");
-
+  out.push((document.documentElement.getAttribute("data-rtlx-force-all") === "rtl" ? "ok   " : "FAIL ") + "toolbar: click cycles to rtl");
   document.querySelector(".topbar").remove();
   document.body.appendChild(document.createElement("span")); // nudge the observer
   setTimeout(() => {
     const b2 = g();
-    const floated = b2 && b2.dataset.dock === "float";
-    out.push((floated ? "ok   " : "FAIL ") + "falls back to floating when toolbar gone");
-    const labelled = b2 && b2.textContent.indexOf("RTL") !== -1;
-    out.push((labelled ? "ok   " : "FAIL ") + "shows text label when floating");
+    out.push((b2 && b2.dataset.dock === "float" ? "ok   " : "FAIL ") + "toolbar: falls back to floating when toolbar gone");
+    out.push((b2 && b2.textContent.indexOf("RTL") !== -1 ? "ok   " : "FAIL ") + "toolbar: shows text label when floating");
     document.getElementById("result").textContent = out.join("\\n");
   }, 400);
 }, 400);
 </script>`;
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rtlx-toggle-"));
-const file = path.join(dir, "toggle.html");
-fs.writeFileSync(file, page, "utf8");
-
-let dom;
-try {
-  dom = execFileSync(
-    chrome,
-    [
-      "--headless",
-      "--disable-gpu",
-      "--no-sandbox",
-      "--allow-file-access-from-files",
-      "--virtual-time-budget=4000",
-      "--dump-dom",
-      "file://" + file,
-    ],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-  );
-} finally {
-  fs.rmSync(dir, { recursive: true, force: true });
+function run(settings) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rtlx-toggle-"));
+  const file = path.join(dir, "toggle.html");
+  fs.writeFileSync(file, pageFor(settings), "utf8");
+  let dom;
+  try {
+    dom = execFileSync(
+      chrome,
+      [
+        "--headless",
+        "--disable-gpu",
+        "--no-sandbox",
+        "--allow-file-access-from-files",
+        "--virtual-time-budget=4000",
+        "--dump-dom",
+        "file://" + file,
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  const m = dom.match(/<pre id="result">([\s\S]*?)<\/pre>/);
+  if (!m) return ["FAIL harness produced no result block"];
+  return m[1]
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .trim()
+    .split("\n");
 }
 
-const m = dom.match(/<pre id="result">([\s\S]*?)<\/pre>/);
-if (!m) {
-  console.error("FAIL: the harness produced no result block");
-  process.exit(1);
-}
-const lines = m[1]
-  .replace(/&amp;/g, "&")
-  .replace(/&lt;/g, "<")
-  .replace(/&gt;/g, ">")
-  .replace(/&quot;/g, '"')
-  .trim()
-  .split("\n");
-for (const line of lines) console.log("  " + line);
+const MODES = [
+  { togglePlacement: "toolbar", enabled: true },
+  { togglePlacement: "floating", enabled: true },
+  { togglePlacement: "hidden", enabled: true },
+];
 
-const failed = lines.filter((l) => l.startsWith("FAIL")).length;
+let total = 0;
+let failed = 0;
+for (const settings of MODES) {
+  console.log(`\n[${settings.togglePlacement}]`);
+  const lines = run(settings);
+  for (const line of lines) console.log("  " + line);
+  total += lines.length;
+  failed += lines.filter((l) => l.startsWith("FAIL")).length;
+}
+
 if (failed) {
-  console.error(`\nFAIL: ${failed}/${lines.length} toggle placement case(s) regressed`);
+  console.error(`\nFAIL: ${failed}/${total} toggle placement case(s) regressed`);
   process.exit(1);
 }
-console.log(`\nPASS: ${lines.length} toggle placement cases`);
+console.log(`\nPASS: ${total} toggle placement cases across ${MODES.length} modes`);

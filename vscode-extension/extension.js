@@ -91,6 +91,7 @@ function rawSettings() {
     showInActivityBar: c.get("showInActivityBar", true),
     showStatusBar: c.get("showStatusBar", true),
     "font.family": c.get("font.family", "Vazirmatn"),
+    "font.custom": c.get("font.custom", ""),
     "font.scale": c.get("font.scale", 1),
     "font.lineHeight": c.get("font.lineHeight", 1.85),
     "detection.mode": c.get("detection.mode", "ratio"),
@@ -98,7 +99,19 @@ function rawSettings() {
     applyToInput: c.get("applyToInput", true),
     showMessageToggles: c.get("showMessageToggles", true),
     keepCodeLeftToRight: c.get("keepCodeLeftToRight", true),
+    togglePlacement: c.get("togglePlacement", "toolbar"),
   };
+}
+
+// Build the CSS font-family value. "Custom" uses the user's own family name
+// (sanitised, then quoted) with Vazirmatn kept as a graceful fallback.
+function fontStackFor(r) {
+  if (r["font.family"] === "Custom") {
+    const name = String(r["font.custom"] || "").trim().replace(/["'\\;{}<>]/g, "");
+    if (name)
+      return '"' + name + '", "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif';
+  }
+  return FONT_STACKS[r["font.family"]] || FONT_STACKS.Vazirmatn;
 }
 
 // Shape the in-webview engine wants.
@@ -107,7 +120,7 @@ function engineSettings() {
   return {
     enabled: r.enabled,
     autoApply: r.autoApplyOnStartup,
-    fontStack: FONT_STACKS[r["font.family"]] || FONT_STACKS.Vazirmatn,
+    fontStack: fontStackFor(r),
     fontScale: r["font.scale"],
     lineHeight: r["font.lineHeight"],
     mode: r["detection.mode"],
@@ -115,6 +128,7 @@ function engineSettings() {
     applyToInput: r.applyToInput,
     showToggles: r.showMessageToggles,
     keepCodeLTR: r.keepCodeLeftToRight,
+    togglePlacement: r.togglePlacement,
   };
 }
 
@@ -132,6 +146,7 @@ function buildJs(context, s) {
     applyToInput: s.applyToInput,
     showToggles: s.showToggles,
     keepCodeLTR: s.keepCodeLTR,
+    togglePlacement: s.togglePlacement,
     enabled: true,
   };
   const driver = fs.readFileSync(asset(context, "driver.js"), "utf8");
