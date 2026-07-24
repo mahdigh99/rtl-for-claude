@@ -12,6 +12,16 @@ This project follows [Semantic Versioning](https://semver.org).
   global Auto / RTL / LTR toggle.
 - Reversible, idempotent installation for Codex with a pristine webview backup
   and a temporary-home lifecycle test.
+- Native Windows PowerShell installer (`vscode-extension/apply-rtl.ps1`) for
+  the Claude Code patcher, plus Antigravity IDE support in both installers
+  (thanks @HuAliAsu).
+
+### Fixed
+
+- Browser extension: on known sites, auto-detection no longer leaks RTL
+  styling outside the chat messages (file previews, code and Markdown tabs)
+  — the global toggle still pins the whole page when you want everything RTL
+  (#1, thanks @HuAliAsu).
 
 ### Compatibility
 
