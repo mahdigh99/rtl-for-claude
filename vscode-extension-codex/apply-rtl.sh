@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================================
-# apply-rtl.sh — patch the OpenAI ChatGPT VS Code extension webview for RTL.
+# apply-rtl.sh — patch the OpenAI Codex VS Code extension webview for RTL.
 #
-# The ChatGPT webview is sandboxed, so we patch its webview/index.html to load
+# The Codex webview is sandboxed, so we patch its webview/index.html to load
 # our own CSS + JS assets from webview/assets/. No modification to
 # out/extension.js is required.
 #
@@ -11,7 +11,7 @@
 #   ./apply-rtl.sh --remove   # uninstall (restore original index.html)
 #   ./apply-rtl.sh --list     # show which extension folders would be patched
 #
-# IMPORTANT: a ChatGPT extension UPDATE replaces these files and wipes the
+# IMPORTANT: a Codex extension UPDATE replaces these files and wipes the
 # patch. Re-run this script after each update.
 # ============================================================================
 set -euo pipefail
@@ -19,11 +19,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STYLES_SRC="$SCRIPT_DIR/assets/styles.css"
 DRIVER_SRC="$SCRIPT_DIR/assets/driver.js"
-FONT_SRC="$SCRIPT_DIR/assets/vazirmatn-chatgpt.woff2"
+FONT_SRC="$SCRIPT_DIR/assets/vazirmatn-codex.woff2"
 
-ASSET_STYLES="rtl-chatgpt-styles.css"
-ASSET_DRIVER="rtl-chatgpt-driver.js"
-ASSET_FONT="vazirmatn-chatgpt.woff2"
+ASSET_STYLES="rtl-codex-styles.css"
+ASSET_DRIVER="rtl-codex-driver.js"
+ASSET_FONT="vazirmatn-codex.woff2"
 
 BEGIN_MARK="<!-- ==== RTL-PATCH (begin) ==== -->"
 END_MARK="<!-- ==== RTL-PATCH (end) ==== -->"
@@ -38,7 +38,7 @@ esac
 
 if [ "$MODE" = "install" ]; then
   for f in "$STYLES_SRC" "$DRIVER_SRC" "$FONT_SRC"; do
-    [ -f "$f" ] || { echo "ERROR: required source file not found: $f"; echo "Run this script from inside the vscode-extension-chatgpt/ folder."; exit 1; }
+    [ -f "$f" ] || { echo "ERROR: required source file not found: $f"; echo "Run this script from inside the vscode-extension-codex/ folder."; exit 1; }
   done
 fi
 
@@ -52,7 +52,7 @@ find_targets() {
   )
   for r in "${roots[@]}"; do
     [ -d "$r" ] || continue
-    find "$r" -maxdepth 3 -type f -path "*openai.chatgpt*/webview/index.html" 2>/dev/null
+    find "$r" -maxdepth 3 -type f -path "*/openai.chatgpt-*/webview/index.html" 2>/dev/null
   done
 }
 
@@ -155,8 +155,8 @@ main() {
   done < <(find_targets)
 
   if [ "$found" -eq 0 ]; then
-    echo "No OpenAI ChatGPT extension found (looked in ~/.vscode, ~/.cursor, ~/.windsurf …)."
-    echo "Install the 'ChatGPT' VS Code extension first, then re-run."
+    echo "No OpenAI Codex extension found (looked in ~/.vscode, ~/.cursor, ~/.windsurf …)."
+    echo "Install the 'Codex' VS Code extension first, then re-run."
     exit 1
   fi
 

@@ -1,7 +1,7 @@
 /* ============================================================================
- * RTL for ChatGPT (VS Code) — webview driver.
+ * RTL for Codex (VS Code) — webview driver.
  *
- * Runs inside the ChatGPT webview. The webview is sandboxed, so we are loaded
+ * Runs inside the Codex webview. The webview is sandboxed, so we are loaded
  * via a patched webview/index.html. We detect Persian/Arabic text in user and
  * assistant messages and mark the stable elements; styles.css then flips the
  * direction and font. This is resilient to React re-renders because the
@@ -11,8 +11,8 @@
  * ========================================================================== */
 ;(function () {
   "use strict";
-  if (window.__rtlChatGPT) return;
-  window.__rtlChatGPT = true;
+  if (window.__rtlCodex) return;
+  window.__rtlCodex = true;
 
   var S = Object.assign(
     {
@@ -30,6 +30,12 @@
   var RTL_RE = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
   var RTL_G = new RegExp(RTL_RE.source, "g");
   var LTR_G = /[A-Za-z\u00C0-\u024F\u0300-\u036F\u1E00-\u1EFF]/g;
+
+  function reportError(error) {
+    if (window.console && typeof window.console.error === "function") {
+      window.console.error("[RTL for Codex]", error);
+    }
+  }
 
   function dirByRatio(text, thr) {
     if (!text) return null;
@@ -71,16 +77,14 @@
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         if (isCodeBlock(el)) continue;
-        if (el.classList.contains("rtlx-rtl")) continue;
         var text = el.textContent || "";
-        if (RTL_RE.test(text) && dirByRatio(text) === "rtl") {
-          el.classList.add("rtlx-rtl");
-          // Mark a stable ancestor for CSS scoping.
-          var turn = el.closest("[data-virtualized-turn-content]");
-          var group = el.closest("[class*='group/thread-details']");
-          var host = turn || group || el.parentElement;
-          if (host) host.setAttribute("data-rtlx-user-rtl", "1");
-        }
+        var rtl = RTL_RE.test(text) && dirByRatio(text) === "rtl";
+        el.classList.toggle("rtlx-rtl", rtl);
+        // Mark a stable ancestor for CSS scoping.
+        var turn = el.closest("[data-virtualized-turn-content]");
+        var group = el.closest("[class*='group/thread-details']");
+        var host = turn || group || el.parentElement;
+        if (host) host.toggleAttribute("data-rtlx-user-rtl", rtl);
       }
     });
   }
@@ -104,10 +108,10 @@
       var el = nodes[i];
       if (isCodeBlock(el)) continue;
       if (isMediaParagraph(el)) continue;
-      if (el.classList.contains("rtlx-rtl")) continue;
       var text = el.textContent || "";
-      if (RTL_RE.test(text) && dirByRatio(text) === "rtl") {
-        el.classList.add("rtlx-rtl");
+      var rtl = RTL_RE.test(text) && dirByRatio(text) === "rtl";
+      el.classList.toggle("rtlx-rtl", rtl);
+      if (rtl) {
         var turn = el.closest("[data-virtualized-turn-content]");
         if (turn) turn.setAttribute("data-rtlx-assistant-rtl", "1");
       }
@@ -163,7 +167,9 @@
       markAssistantMarkdown();
       applyInputDirection();
       ensureGlobalToggle();
-    } catch (e) {}
+    } catch (error) {
+      reportError(error);
+    }
   }
 
   var pending = false;
@@ -183,7 +189,9 @@
     new MutationObserver(function () {
       schedule();
     }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-  } catch (e) {}
+  } catch (error) {
+    reportError(error);
+  }
 
   // Re-check periodically in case very slow mutations slip through.
   setInterval(sweep, 2000);

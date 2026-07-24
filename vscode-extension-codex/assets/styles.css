@@ -1,5 +1,5 @@
 /* ============================================================================
- * RTL for ChatGPT (VS Code) — webview styles.
+ * RTL for Codex (VS Code) — webview styles.
  *
  * Loaded by a patched webview/index.html. Direction classes are stamped by
  * driver.js so we do not have to chase scoped CSS-module hashes in the CSS.
@@ -7,8 +7,9 @@
 
 @font-face {
   font-family: "Vazirmatn RTLX";
-  src: url("./vazirmatn-chatgpt.woff2") format("woff2");
-  font-weight: 100 900;
+  src: url("./vazirmatn-codex.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
 }
 
