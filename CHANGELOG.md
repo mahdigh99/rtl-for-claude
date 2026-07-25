@@ -47,6 +47,11 @@ This project follows [Semantic Versioning](https://semver.org).
   on/off toggle knobs no longer spill outside their track (the switches keep
   their size instead of being squeezed).
 
+- Previous user messages stayed left-to-right when they opened with a URL or an
+  English word. Claude renders that text as `<span dir="auto">`, and the `dir`
+  attribute derives the direction from the first strong character, outranking
+  the direction set on the message bubble — so the whole message read LTR. Those
+  spans now inherit the bubble's direction (code excluded, so it stays LTR).
 - A Persian paragraph that **starts with an English word** ("authorization
   اصلاً …") no longer renders left-to-right with that word pushed to the visual
   end of the sentence. Claude marks prose with `unicode-bidi: plaintext`, which

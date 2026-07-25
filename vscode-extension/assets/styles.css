@@ -103,6 +103,20 @@
   text-align: right !important;
 }
 
+/* Claude renders user-message text inside `<span dir="auto">` (and uses dir=auto
+   elsewhere too). The dir attribute derives the direction from the FIRST STRONG
+   character, which beats the `direction` we set on the bubble — so a Persian
+   message that opens with a URL or an English word stayed left-to-right. Making
+   those spans inherit the container's direction hands control back to us; code
+   is excluded via :where() so the monospace/LTR rules below still win there. */
+[data-rtlx-seen] [dir="auto"]:where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)),
+[data-rtlx-force="rtl"] [dir="auto"]:where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)),
+[data-rtlx-force-all="rtl"] [dir="auto"]:where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)),
+[data-rtlx-force-all="ltr"] [dir="auto"]:where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)) {
+  direction: inherit !important;
+  unicode-bidi: isolate !important;
+}
+
 /* Make alignment follow the (native) resolved direction, beating any app rule.
    Only our stamped message blocks carry a dir attribute, so this is scoped. */
 [class*="message_"] [dir],
