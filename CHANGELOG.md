@@ -15,9 +15,6 @@ This project follows [Semantic Versioning](https://semver.org).
 - Native Windows PowerShell installer (`vscode-extension/apply-rtl.ps1`) for
   the Claude Code patcher, plus Antigravity IDE support in both installers
   (thanks @HuAliAsu).
-
-### Added
-
 - **The settings panel now speaks four languages** — English, فارسی, العربية and
   اردو, the same set the project ships READMEs for. It follows the VS Code
   display language by default and can be pinned from a Language picker in the
@@ -46,7 +43,6 @@ This project follows [Semantic Versioning](https://semver.org).
   dropdowns and sliders no longer overflow off-screen (rows wrap), and the
   on/off toggle knobs no longer spill outside their track (the switches keep
   their size instead of being squeezed).
-
 - Previous user messages stayed left-to-right when they opened with a URL or an
   English word. Claude renders that text as `<span dir="auto">`, and the `dir`
   attribute derives the direction from the first strong character, outranking
