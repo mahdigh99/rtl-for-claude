@@ -3,7 +3,10 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension).
 This project follows [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.2.0] — 2026-07-25
+
+Codex support, a translated settings panel, and a batch of right-to-left
+correctness fixes for messages that mix Persian with English.
 
 ### Added
 
