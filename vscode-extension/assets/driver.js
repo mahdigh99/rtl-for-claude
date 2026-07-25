@@ -134,6 +134,11 @@
   }
   function addToggle(msg) {
     if (!S.showToggles) return;
+    // A user message matches MSG twice — the outer userMessageContainer_ and the
+    // inner userMessage_ bubble — which used to stack two buttons in the same
+    // corner. Only the outermost one gets the toggle; forcing it from there
+    // covers the bubble because the force rules are descendant-scoped.
+    if (msg.parentElement && msg.parentElement.closest(MSG)) return;
     if (msg.querySelector(":scope > .rtlx-toggle")) return;
     msg.classList.add("rtlx-host");
     var b = document.createElement("button");

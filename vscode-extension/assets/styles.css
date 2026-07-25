@@ -76,11 +76,14 @@
    alignment. Message/table direction is handled by the prose+table rules above,
    which only touch content elements, never the flex wrappers. */
 [class*="questionsContainer"][data-rtlx-seen],
+[data-rtlx-force="rtl"] [class*="questionsContainer"],
+[class*="questionsContainer"][data-rtlx-force="rtl"],
 [data-rtlx-force-all="rtl"] [class*="questionsContainer"] {
   direction: rtl !important;
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
 }
 [class*="questionsContainer"][data-rtlx-seen] :is(pre, code, kbd, samp),
+[data-rtlx-force="rtl"] [class*="questionsContainer"] :is(pre, code, kbd, samp),
 [data-rtlx-force-all="rtl"] [class*="questionsContainer"] :is(pre, code, kbd, samp) {
   direction: ltr !important;
   unicode-bidi: isolate;
@@ -91,16 +94,38 @@
    direction on the bubble is SAFE — it's inline-block, not a flex row — so the
    text reads RTL. Its wrapper .userMessageContainer_ uses text-align:left to push
    the bubble left; we only flip that text-align (NOT direction) so the bubble
-   sits on the right without reversing the flex layout. */
+   sits on the right without reversing the flex layout.
+
+   The per-message toggle stamps [data-rtlx-force] on the OUTERMOST message
+   element, so the force variants below are descendant-scoped (plus a self match
+   for the case where the bubble itself carries the attribute). Without them the
+   toggle set the attribute but nothing styled a plain-text bubble. */
 [class*="userMessage_"][data-rtlx-seen],
+[class*="userMessage_"][data-rtlx-force="rtl"],
+[data-rtlx-force="rtl"] [class*="userMessage_"],
 [data-rtlx-force-all="rtl"] [class*="userMessage_"] {
   direction: rtl !important;
   text-align: right !important;
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
 }
+/* Forcing LTR must beat the auto-detected RTL above, so it repeats the same
+   shapes rather than relying on source order alone. */
+[class*="userMessage_"][data-rtlx-force="ltr"],
+[data-rtlx-force="ltr"] [class*="userMessage_"],
+[data-rtlx-force-all="ltr"] [class*="userMessage_"] {
+  direction: ltr !important;
+  text-align: left !important;
+}
 [class*="userMessageContainer"][data-rtlx-seen],
+[class*="userMessageContainer"][data-rtlx-force="rtl"],
+[data-rtlx-force="rtl"] [class*="userMessageContainer"],
 [data-rtlx-force-all="rtl"] [class*="userMessageContainer"] {
   text-align: right !important;
+}
+[class*="userMessageContainer"][data-rtlx-force="ltr"],
+[data-rtlx-force="ltr"] [class*="userMessageContainer"],
+[data-rtlx-force-all="ltr"] [class*="userMessageContainer"] {
+  text-align: left !important;
 }
 
 /* Claude renders user-message text inside `<span dir="auto">` (and uses dir=auto

@@ -43,6 +43,11 @@ This project follows [Semantic Versioning](https://semver.org).
   dropdowns and sliders no longer overflow off-screen (rows wrap), and the
   on/off toggle knobs no longer spill outside their track (the switches keep
   their size instead of being squeezed).
+- The per-message direction toggle showed **two stacked buttons** on user
+  messages (the container and the bubble both matched), and clicking it did
+  nothing on a plain-text message: the force rules only targeted prose tags,
+  which those messages don't have. Now one button per message, and forcing
+  RTL/LTR flips the bubble itself.
 - Previous user messages stayed left-to-right when they opened with a URL or an
   English word. Claude renders that text as `<span dir="auto">`, and the `dir`
   attribute derives the direction from the first strong character, outranking
