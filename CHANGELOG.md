@@ -18,6 +18,11 @@ This project follows [Semantic Versioning](https://semver.org).
 
 ### Added
 
+- **The settings panel now speaks four languages** — English, فارسی, العربية and
+  اردو, the same set the project ships READMEs for. It follows the VS Code
+  display language by default and can be pinned from a Language picker in the
+  panel (`rtlForClaude.language`). For Persian/Arabic/Urdu the panel itself
+  flips to RTL, including the on/off switches.
 - **Direction-button placement setting** (`rtlForClaude.togglePlacement`): choose
   Top toolbar (default), Floating, or Hidden for the whole-chat Auto/RTL/LTR
   button — from the sidebar panel or VS Code settings.
@@ -35,6 +40,8 @@ This project follows [Semantic Versioning](https://semver.org).
 
 ### Fixed
 
+- Changing the direction-button placement now takes effect immediately instead
+  of waiting for some other setting to trigger a re-patch.
 - Settings panel is now responsive: on a narrow sidebar the font/detection
   dropdowns and sliders no longer overflow off-screen (rows wrap), and the
   on/off toggle knobs no longer spill outside their track (the switches keep

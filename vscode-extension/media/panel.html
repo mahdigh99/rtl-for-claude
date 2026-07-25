@@ -6,6 +6,10 @@
 <style>
   :root { color-scheme: light dark; }
   body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); padding: 10px 12px 18px; }
+  /* Persian/Arabic/Urdu read better in a face that has proper Arabic-script
+     shaping. We can't load the bundled woff2 here (the panel's CSP allows no
+     font-src), so we lean on faces the user is likely to already have. */
+  html[dir="rtl"] body { font-family: "Vazirmatn", "Sahel", Tahoma, var(--vscode-font-family), sans-serif; }
   h2 { font-size: 13px; margin: 0 0 2px; }
   .sub { color: var(--vscode-descriptionForeground); font-size: 11px; margin-bottom: 14px; }
   .card { background: var(--vscode-editorWidget-background, rgba(127,127,127,.06)); border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.16)); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
@@ -19,10 +23,12 @@
   .ctl { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
   select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border, transparent); border-radius: 4px; padding: 3px 6px; font-family: inherit; max-width: 100%; }
   input[type="text"] { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, transparent); border-radius: 4px; padding: 3px 6px; font-family: inherit; font-size: 12px; width: 140px; max-width: 100%; min-width: 0; }
+  /* A font family name is always Latin-ish and must stay LTR even in an RTL panel. */
+  #font\.custom { direction: ltr; text-align: left; }
   #customFontRow { display: none; }
   #customFontRow.show { display: flex; }
   input[type="range"] { width: 116px; max-width: 100%; min-width: 0; accent-color: var(--vscode-focusBorder); }
-  .val { font-variant-numeric: tabular-nums; color: var(--vscode-descriptionForeground); font-size: 11px; min-width: 36px; text-align: right; flex-shrink: 0; }
+  .val { font-variant-numeric: tabular-nums; color: var(--vscode-descriptionForeground); font-size: 11px; min-width: 36px; text-align: end; flex-shrink: 0; direction: ltr; }
   button { font-family: inherit; font-size: 12px; border: none; border-radius: 5px; padding: 6px 10px; cursor: pointer; }
   .btns { display: flex; gap: 8px; margin: 4px 0 2px; }
   .primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); flex: 1; }
@@ -35,68 +41,208 @@
   .switch { position: relative; display: inline-block; width: 34px; height: 18px; flex-shrink: 0; }
   .switch input { opacity: 0; width: 0; height: 0; }
   .slider { position: absolute; inset: 0; background: rgba(127,127,127,.4); border-radius: 999px; transition: .15s; }
-  .slider::before { content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: .15s; }
+  /* inset-inline-start so the knob rests on the correct edge in both directions;
+     the checked transform is mirrored for RTL just below. */
+  .slider::before { content: ""; position: absolute; width: 14px; height: 14px; inset-inline-start: 2px; top: 2px; background: #fff; border-radius: 50%; transition: .15s; }
   input:checked + .slider { background: var(--vscode-testing-iconPassed, #3fb950); }
   input:checked + .slider::before { transform: translateX(16px); }
+  html[dir="rtl"] input:checked + .slider::before { transform: translateX(-16px); }
   a { color: var(--vscode-textLink-foreground); cursor: pointer; }
   #opts.muted { opacity: .45; pointer-events: none; }
 </style>
 </head>
 <body>
   <h2>RTL for Claude</h2>
-  <div class="sub">Right-to-left for the Claude Code chat.</div>
+  <div class="sub" data-i18n="subtitle">Right-to-left for the Claude Code chat.</div>
 
   <div class="card">
     <div class="row">
-      <label><strong>Enabled</strong></label>
+      <label><strong data-i18n="enabled">Enabled</strong></label>
       <label class="switch"><input type="checkbox" id="enabled" /><span class="slider"></span></label>
     </div>
-    <div class="sub" style="margin: 2px 0 0;">Turning this off restores the original chat.</div>
+    <div class="sub" style="margin: 2px 0 0;" data-i18n="enabledHint">Turning this off restores the original chat.</div>
+    <div class="row">
+      <label data-i18n="language">Language</label>
+      <select id="language">
+        <option value="auto" data-i18n="langAuto">Auto (VS Code)</option>
+        <option value="en">English</option>
+        <option value="fa">فارسی</option>
+        <option value="ar">العربية</option>
+        <option value="ur">اردو</option>
+      </select>
+    </div>
   </div>
 
   <div id="opts">
     <div class="card">
       <div class="row">
-        <label>Font</label>
-        <select id="font.family"><option>Vazirmatn</option><option>Sahel</option><option>System default</option><option value="Custom">Custom…</option></select>
+        <label data-i18n="font">Font</label>
+        <select id="font.family">
+          <option value="Vazirmatn">Vazirmatn</option>
+          <option value="Sahel">Sahel</option>
+          <option value="System default" data-i18n="fontSystem">System default</option>
+          <option value="Custom" data-i18n="fontCustomOpt">Custom…</option>
+        </select>
       </div>
-      <div class="row" id="customFontRow"><label>Custom font family</label><span class="ctl"><input type="text" id="font.custom" placeholder="e.g. Estedad" spellcheck="false" /></span></div>
-      <div class="row"><label>Text size</label><span class="ctl"><input type="range" id="font.scale" min="0.8" max="1.6" step="0.05" /><span class="val" id="font.scale_v"></span></span></div>
-      <div class="row"><label>Line spacing</label><span class="ctl"><input type="range" id="font.lineHeight" min="1.3" max="2.5" step="0.05" /><span class="val" id="font.lineHeight_v"></span></span></div>
+      <div class="row" id="customFontRow"><label data-i18n="customFont">Custom font family</label><span class="ctl"><input type="text" id="font.custom" data-i18n-ph="customFontPh" placeholder="e.g. Estedad" spellcheck="false" /></span></div>
+      <div class="row"><label data-i18n="textSize">Text size</label><span class="ctl"><input type="range" id="font.scale" min="0.8" max="1.6" step="0.05" /><span class="val" id="font.scale_v"></span></span></div>
+      <div class="row"><label data-i18n="lineSpacing">Line spacing</label><span class="ctl"><input type="range" id="font.lineHeight" min="1.3" max="2.5" step="0.05" /><span class="val" id="font.lineHeight_v"></span></span></div>
     </div>
 
     <div class="card">
       <div class="row">
-        <label>Detection</label>
-        <select id="detection.mode"><option value="ratio">Smart (ratio)</option><option value="first-strong">First letter</option></select>
+        <label data-i18n="detection">Detection</label>
+        <select id="detection.mode"><option value="ratio" data-i18n="detSmart">Smart (ratio)</option><option value="first-strong" data-i18n="detFirst">First letter</option></select>
       </div>
-      <div class="row" id="thrRow"><label>RTL threshold</label><span class="ctl"><input type="range" id="detection.threshold" min="0.1" max="0.7" step="0.05" /><span class="val" id="detection.threshold_v"></span></span></div>
+      <div class="row" id="thrRow"><label data-i18n="threshold">RTL threshold</label><span class="ctl"><input type="range" id="detection.threshold" min="0.1" max="0.7" step="0.05" /><span class="val" id="detection.threshold_v"></span></span></div>
     </div>
 
     <div class="card">
       <div class="row">
-        <label>Direction button</label>
-        <select id="togglePlacement"><option value="toolbar">Top toolbar</option><option value="floating">Floating</option><option value="hidden">Hidden</option></select>
+        <label data-i18n="dirButton">Direction button</label>
+        <select id="togglePlacement"><option value="toolbar" data-i18n="placeToolbar">Top toolbar</option><option value="floating" data-i18n="placeFloating">Floating</option><option value="hidden" data-i18n="placeHidden">Hidden</option></select>
       </div>
-      <div class="row"><label>Flip the message box as you type</label><label class="switch"><input type="checkbox" id="applyToInput" /><span class="slider"></span></label></div>
-      <div class="row"><label>Per-message direction toggle</label><label class="switch"><input type="checkbox" id="showMessageToggles" /><span class="slider"></span></label></div>
-      <div class="row"><label>Keep code left-to-right</label><label class="switch"><input type="checkbox" id="keepCodeLeftToRight" /><span class="slider"></span></label></div>
+      <div class="row"><label data-i18n="flipInput">Flip the message box as you type</label><label class="switch"><input type="checkbox" id="applyToInput" /><span class="slider"></span></label></div>
+      <div class="row"><label data-i18n="perMsg">Per-message direction toggle</label><label class="switch"><input type="checkbox" id="showMessageToggles" /><span class="slider"></span></label></div>
+      <div class="row"><label data-i18n="keepCode">Keep code left-to-right</label><label class="switch"><input type="checkbox" id="keepCodeLeftToRight" /><span class="slider"></span></label></div>
     </div>
 
     <div class="card">
-      <div class="row"><label>Re-apply after Claude updates</label><label class="switch"><input type="checkbox" id="autoApplyOnStartup" /><span class="slider"></span></label></div>
-      <div class="row"><label>Show in left sidebar</label><label class="switch"><input type="checkbox" id="showInActivityBar" /><span class="slider"></span></label></div>
-      <div class="row"><label>Show in status bar</label><label class="switch"><input type="checkbox" id="showStatusBar" /><span class="slider"></span></label></div>
+      <div class="row"><label data-i18n="reapply">Re-apply after Claude updates</label><label class="switch"><input type="checkbox" id="autoApplyOnStartup" /><span class="slider"></span></label></div>
+      <div class="row"><label data-i18n="sidebar">Show in left sidebar</label><label class="switch"><input type="checkbox" id="showInActivityBar" /><span class="slider"></span></label></div>
+      <div class="row"><label data-i18n="statusbar">Show in status bar</label><label class="switch"><input type="checkbox" id="showStatusBar" /><span class="slider"></span></label></div>
     </div>
   </div>
 
-  <div class="sub"><a id="openSettings">Open full Settings →</a></div>
+  <div class="sub"><a id="openSettings" data-i18n="openSettings">Open full Settings →</a></div>
 
 <script nonce="__NONCE__">
   const vscode = acquireVsCodeApi();
   const $ = (id) => document.getElementById(id);
+
+  // --- i18n ----------------------------------------------------------------
+  // Same four languages the project ships READMEs for. `en` is the fallback and
+  // also the source of truth for the markup's default text.
+  const I18N = {
+    en: {},
+    fa: {
+      subtitle: "راست‌چین کردنِ چتِ Claude Code.",
+      enabled: "فعال",
+      enabledHint: "با خاموش کردنش، چت به حالت اصلی برمی‌گردد.",
+      language: "زبان",
+      langAuto: "خودکار (VS Code)",
+      font: "فونت",
+      fontSystem: "پیش‌فرضِ سیستم",
+      fontCustomOpt: "دلخواه…",
+      customFont: "نامِ فونتِ دلخواه",
+      customFontPh: "مثلاً Estedad",
+      textSize: "اندازهٔ متن",
+      lineSpacing: "فاصلهٔ خط‌ها",
+      detection: "تشخیص",
+      detSmart: "هوشمند (نسبت)",
+      detFirst: "حرفِ اول",
+      threshold: "آستانهٔ راست‌چین",
+      dirButton: "دکمهٔ جهت",
+      placeToolbar: "نوارِ بالا",
+      placeFloating: "شناور",
+      placeHidden: "مخفی",
+      flipInput: "چرخاندنِ کادرِ پیام هنگام تایپ",
+      perMsg: "کلیدِ جهت روی هر پیام",
+      keepCode: "کد چپ‌چین بماند",
+      reapply: "اعمالِ دوباره بعد از آپدیتِ Claude",
+      sidebar: "نمایش در نوارِ کناری",
+      statusbar: "نمایش در نوارِ وضعیت",
+      openSettings: "بازکردنِ تنظیماتِ کامل ←",
+    },
+    ar: {
+      subtitle: "محاذاة من اليمين إلى اليسار لمحادثة Claude Code.",
+      enabled: "مُفعّل",
+      enabledHint: "إيقافه يُعيد المحادثة إلى شكلها الأصلي.",
+      language: "اللغة",
+      langAuto: "تلقائي (VS Code)",
+      font: "الخط",
+      fontSystem: "الافتراضي للنظام",
+      fontCustomOpt: "مخصّص…",
+      customFont: "اسم الخط المخصّص",
+      customFontPh: "مثال: Estedad",
+      textSize: "حجم النص",
+      lineSpacing: "تباعد الأسطر",
+      detection: "الاكتشاف",
+      detSmart: "ذكي (نسبة)",
+      detFirst: "أول حرف",
+      threshold: "عتبة اليمين إلى اليسار",
+      dirButton: "زر الاتجاه",
+      placeToolbar: "الشريط العلوي",
+      placeFloating: "عائم",
+      placeHidden: "مخفي",
+      flipInput: "قلب صندوق الكتابة أثناء الكتابة",
+      perMsg: "زر الاتجاه على كل رسالة",
+      keepCode: "إبقاء الكود من اليسار إلى اليمين",
+      reapply: "إعادة التطبيق بعد تحديثات Claude",
+      sidebar: "إظهار في الشريط الجانبي",
+      statusbar: "إظهار في شريط الحالة",
+      openSettings: "فتح الإعدادات الكاملة ←",
+    },
+    ur: {
+      subtitle: "Claude Code چیٹ کے لیے دائیں سے بائیں ترتیب۔",
+      enabled: "فعال",
+      enabledHint: "اسے بند کرنے پر چیٹ اصل حالت میں واپس آ جاتی ہے۔",
+      language: "زبان",
+      langAuto: "خودکار (VS Code)",
+      font: "فونٹ",
+      fontSystem: "سسٹم ڈیفالٹ",
+      fontCustomOpt: "حسبِ مرضی…",
+      customFont: "اپنی پسند کے فونٹ کا نام",
+      customFontPh: "مثلاً Estedad",
+      textSize: "متن کا سائز",
+      lineSpacing: "سطروں کا فاصلہ",
+      detection: "پہچان",
+      detSmart: "سمارٹ (تناسب)",
+      detFirst: "پہلا حرف",
+      threshold: "RTL کی حد",
+      dirButton: "سمت والا بٹن",
+      placeToolbar: "اوپر والی پٹی",
+      placeFloating: "فلوٹنگ",
+      placeHidden: "پوشیدہ",
+      flipInput: "لکھتے وقت پیغام کا خانہ پلٹائیں",
+      perMsg: "ہر پیغام پر سمت کا بٹن",
+      keepCode: "کوڈ بائیں سے دائیں رکھیں",
+      reapply: "Claude اپڈیٹ کے بعد دوبارہ لاگو کریں",
+      sidebar: "سائیڈ بار میں دکھائیں",
+      statusbar: "اسٹیٹس بار میں دکھائیں",
+      openSettings: "مکمل ترتیبات کھولیں ←",
+    },
+  };
+  const RTL_LOCALES = ["fa", "ar", "ur"];
+  // What "Auto" resolves to, computed from vscode.env.language by the extension.
+  const AUTO_LOCALE = "__LOCALE_AUTO__";
+  // The English text already in the markup is the en dictionary — capture it once
+  // so switching back to English restores the originals.
+  document.querySelectorAll("[data-i18n]").forEach((el) => { I18N.en[el.dataset.i18n] = el.textContent; });
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => { I18N.en[el.dataset.i18nPh] = el.placeholder; });
+
+  function resolveLocale(pick) {
+    if (pick && pick !== "auto" && I18N[pick]) return pick;
+    return I18N[AUTO_LOCALE] ? AUTO_LOCALE : "en";
+  }
+  function applyLocale(loc) {
+    const d = I18N[loc] || I18N.en;
+    const root = document.documentElement;
+    root.lang = loc;
+    root.dir = RTL_LOCALES.indexOf(loc) !== -1 ? "rtl" : "ltr";
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const v = d[el.dataset.i18n] !== undefined ? d[el.dataset.i18n] : I18N.en[el.dataset.i18n];
+      if (v !== undefined) el.textContent = v;
+    });
+    document.querySelectorAll("[data-i18n-ph]").forEach((el) => {
+      const v = d[el.dataset.i18nPh] !== undefined ? d[el.dataset.i18nPh] : I18N.en[el.dataset.i18nPh];
+      if (v !== undefined) el.placeholder = v;
+    });
+  }
+
+  // --- settings wiring ------------------------------------------------------
   const BOOL = ["enabled", "applyToInput", "showMessageToggles", "keepCodeLeftToRight", "autoApplyOnStartup", "showInActivityBar", "showStatusBar"];
-  const SEL = ["font.family", "detection.mode", "togglePlacement"];
+  const SEL = ["font.family", "detection.mode", "togglePlacement", "language"];
   const TEXT = ["font.custom"];
   const NUM = ["font.scale", "font.lineHeight", "detection.threshold"];
   const send = (key, value) => vscode.postMessage({ type: "set", key, value });
@@ -105,7 +251,13 @@
   function syncCustomFont() { $("customFontRow").classList.toggle("show", $("font.family").value === "Custom"); }
 
   BOOL.forEach((id) => $(id) && $(id).addEventListener("change", (e) => send(id, e.target.checked)));
-  SEL.forEach((id) => $(id) && $(id).addEventListener("change", (e) => { send(id, e.target.value); if (id === "detection.mode") syncThreshold(); if (id === "font.family") syncCustomFont(); }));
+  SEL.forEach((id) => $(id) && $(id).addEventListener("change", (e) => {
+    send(id, e.target.value);
+    if (id === "detection.mode") syncThreshold();
+    if (id === "font.family") syncCustomFont();
+    // Re-render immediately instead of waiting for the config round-trip.
+    if (id === "language") applyLocale(resolveLocale(e.target.value));
+  }));
   // Debounce free text so we persist when the user pauses/blurs, not per keystroke.
   TEXT.forEach((id) => { if (!$(id)) return; let t; $(id).addEventListener("input", (e) => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => send(id, v), 350); }); $(id).addEventListener("change", (e) => { clearTimeout(t); send(id, e.target.value); }); });
   NUM.forEach((id) => $(id) && $(id).addEventListener("input", (e) => fmt(id, e.target.value)));
@@ -123,9 +275,12 @@
     NUM.forEach((id) => { if ($(id)) { $(id).value = s[id]; fmt(id, s[id]); } });
     syncThreshold();
     syncCustomFont();
+    applyLocale(resolveLocale(s.language));
     $("opts").classList.toggle("muted", !s.enabled);
   });
 
+  // Paint in the right language before the first state message arrives.
+  applyLocale("__LOCALE__");
   vscode.postMessage({ type: "ready" });
 </script>
 </body>

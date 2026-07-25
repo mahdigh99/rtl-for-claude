@@ -87,6 +87,7 @@ function rawSettings() {
   const c = vscode.workspace.getConfiguration("rtlForClaude");
   return {
     enabled: c.get("enabled", true),
+    language: c.get("language", "auto"),
     autoApplyOnStartup: c.get("autoApplyOnStartup", true),
     showInActivityBar: c.get("showInActivityBar", true),
     showStatusBar: c.get("showStatusBar", true),
@@ -252,10 +253,30 @@ function scheduleReapply(context) {
 
 // --- sidebar panel (Activity Bar) ------------------------------------------
 
+// The panel ships the four languages the project has READMEs for.
+const PANEL_LOCALES = ["en", "fa", "ar", "ur"];
+
+// What "auto" resolves to: the base of the VS Code display language (fa-IR → fa),
+// or English when we don't translate it.
+function autoLocale() {
+  const base = String(vscode.env.language || "en").toLowerCase().split(/[-_]/)[0];
+  return PANEL_LOCALES.indexOf(base) !== -1 ? base : "en";
+}
+
+function panelLocale() {
+  const pick = vscode.workspace.getConfiguration("rtlForClaude").get("language", "auto");
+  return PANEL_LOCALES.indexOf(pick) !== -1 ? pick : autoLocale();
+}
+
 function panelHtml(context, webview) {
   const nonce = crypto.randomBytes(16).toString("hex");
   let html = fs.readFileSync(path.join(context.extensionPath, "media", "panel.html"), "utf8");
-  return html.replace(/__NONCE__/g, nonce);
+  // __LOCALE__ paints the first frame in the right language; __LOCALE_AUTO__ lets
+  // the panel re-resolve "auto" itself when the user switches language.
+  return html
+    .replace(/__NONCE__/g, nonce)
+    .replace(/__LOCALE_AUTO__/g, autoLocale())
+    .replace(/__LOCALE__/g, panelLocale());
 }
 
 function makePanelProvider(context) {
@@ -367,6 +388,9 @@ function activate(context) {
         "rtlForClaude.applyToInput",
         "rtlForClaude.showMessageToggles",
         "rtlForClaude.keepCodeLeftToRight",
+        // Placement is baked into the injected driver settings, so it needs a
+        // re-patch too — `language` deliberately is not: it only skins the panel.
+        "rtlForClaude.togglePlacement",
       ];
       if (webviewKeys.some((k) => e.affectsConfiguration(k))) scheduleReapply(context);
     })

@@ -117,6 +117,26 @@
           "order": 11,
           "description": "Show the small RTL on/off item in the status bar."
         },
+        "rtlForClaude.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "fa",
+            "ar",
+            "ur"
+          ],
+          "enumDescriptions": [
+            "Follow the VS Code display language (falls back to English).",
+            "English",
+            "فارسی (Persian)",
+            "العربية (Arabic)",
+            "اردو (Urdu)"
+          ],
+          "default": "auto",
+          "order": 1.5,
+          "description": "Language of the RTL for Claude side panel."
+        },
         "rtlForClaude.font.family": {
           "type": "string",
           "enum": [
