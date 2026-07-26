@@ -75,17 +75,35 @@ strip_patch() { # remove our marked block from a file, in place
 append_block() { # append BEGIN + <one or more sources> + END, no blank-line buildup
   local target="$1"; shift
   [ -f "$target" ] || return 0
+  local bak="$target.rtl-backup"
   # one-time pristine backup
-  [ -f "$target.rtl-backup" ] || cp "$target" "$target.rtl-backup"
-  # strip any previous version of our block first (idempotent)
-  if grep -qF "$BEGIN_MARK" "$target"; then strip_patch "$target"; fi
-  # ensure exactly one trailing newline so our block starts on its own line
-  if [ -s "$target" ] && [ -n "$(tail -c1 "$target")" ]; then printf '\n' >> "$target"; fi
+  [ -f "$bak" ] || cp "$target" "$bak"
+  # Build the whole result in a temp file: current content minus any previous
+  # version of our block (idempotent), one trailing newline, then the block.
+  # The target itself is only ever replaced whole, via the mv below.
+  local tmp="$target.tmp.$$"
+  awk -v b="$BEGIN_MARK" -v e="$END_MARK" '
+    $0==b {skip=1}
+    skip==0 {print}
+    $0==e {skip=0}
+  ' "$target" > "$tmp"
+  if [ -s "$tmp" ] && [ -n "$(tail -c1 "$tmp")" ]; then printf '\n' >> "$tmp"; fi
   {
     printf '%s\n' "$BEGIN_MARK"
     cat "$@"
     printf '%s\n' "$END_MARK"
-  } >> "$target"
+  } >> "$tmp"
+  # Size guard: injection only ADDS bytes on top of the pristine original, so a
+  # result smaller than the backup means the current file is torn/truncated
+  # (e.g. by a crashed patcher). Keep the good backup, skip this file.
+  local new_bytes bak_bytes
+  new_bytes=$(($(wc -c < "$tmp"))); bak_bytes=$(($(wc -c < "$bak")))
+  if [ "$new_bytes" -lt "$bak_bytes" ]; then
+    rm -f "$tmp"
+    echo "  WARNING: skipped $target — result ($new_bytes B) smaller than its pristine backup ($bak_bytes B): the file looks torn. Restore it from $bak, then re-run."
+    return 0
+  fi
+  mv "$tmp" "$target"
 }
 
 patch_one() { # $1 = path to index.css
@@ -108,9 +126,18 @@ unpatch_one() { # $1 = path to index.css
   local dir; dir="$(dirname "$css")"
   local js="$dir/index.js"
   local n=0
-  if grep -qF "$BEGIN_MARK" "$css"; then strip_patch "$css"; n=$((n+1)); fi
-  if [ -f "$js" ] && grep -qF "$BEGIN_MARK" "$js"; then strip_patch "$js"; n=$((n+1)); fi
-  rm -f "$dir/$FONT_DEST_NAME" "$css.rtl-backup" "$js.rtl-backup"
+  # Prefer the pristine backup (byte-for-byte restore, same as the extension
+  # and the PowerShell script); fall back to stripping our marked block.
+  local f
+  for f in "$css" "$js"; do
+    [ -f "$f" ] || continue
+    if [ -f "$f.rtl-backup" ]; then
+      mv "$f.rtl-backup" "$f"; n=$((n+1))
+    elif grep -qF "$BEGIN_MARK" "$f"; then
+      strip_patch "$f"; n=$((n+1))
+    fi
+  done
+  rm -f "$dir/$FONT_DEST_NAME"
   if [ "$n" -gt 0 ]; then echo "  unpatched: $dir"; else echo "  (no patch present): $dir"; fi
 }
 

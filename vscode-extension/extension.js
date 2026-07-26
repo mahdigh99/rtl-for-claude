@@ -5,19 +5,31 @@
  * runtime, so we patch its on-disk files (webview/index.css + index.js). Your
  * settings — from the left-sidebar panel or the Settings UI — are compiled into
  * the injected CSS variables + a settings object the in-webview engine reads.
- * We re-apply on startup and whenever a setting changes (Claude updates wipe
- * the patch). Only the Claude Code webview is touched; nothing else. Fully
+ * We re-apply on startup, whenever a setting changes, and — via a watcher on
+ * each extensions directory — the moment a Claude Code update drops a new
+ * version folder. Only the Claude Code webview is touched; nothing else. Fully
  * reversible (each original file is kept as *.rtl-backup).
+ *
+ * All file mutation lives in patcher.js (zero vscode imports: cross-process
+ * lock + atomic writes + size guard); this file is the vscode-facing shell.
  * ========================================================================== */
 const vscode = require("vscode");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
+const patcher = require("./patcher");
 
-const BEGIN = "/* ==== RTL-PATCH (begin) ==== */";
-const END = "/* ==== RTL-PATCH (end) ==== */";
-const FONT_DEST = "vazirmatn.woff2";
+const FONT_DEST = patcher.FONT_DEST;
 const PANEL_ID = "rtlForClaude.panel";
+
+// Update-watcher tuning. An update fires many fs events while the new folder
+// is extracted: debounce, then retry a few times, a few seconds apart, for the
+// case where webview/ isn't extracted yet on the first look. Env overrides
+// exist ONLY so the lifecycle test doesn't have to wait out real seconds.
+const WATCH_DEBOUNCE_MS = Number(process.env.RTLX_WATCH_DEBOUNCE_MS || "") || 2000;
+const WATCH_RETRY_DELAY_MS = Number(process.env.RTLX_WATCH_RETRY_MS || "") || 2500;
+const WATCH_RETRIES = 3;
 
 const FONT_STACKS = {
   Vazirmatn: '"Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif',
@@ -25,59 +37,29 @@ const FONT_STACKS = {
   "System default": "var(--vscode-font-family), Tahoma, sans-serif",
 };
 
-// --- patch primitives (shared model with apply-rtl.sh) ---------------------
+// --- discovery -------------------------------------------------------------
 
-function reEsc(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-// Our block is always appended at end-of-file; anchor to EOF so we never fuse
-// two surrounding lines.
-function stripBlock(text) {
-  const re = new RegExp(
-    "\\n?" + reEsc(BEGIN) + "[\\s\\S]*?" + reEsc(END) + "[^\\S\\r\\n]*\\n?$"
-  );
-  return text.replace(re, "");
-}
-
-function claudeWebviewDir() {
-  const ext = vscode.extensions.getExtension("anthropic.claude-code");
-  if (!ext) return null;
-  const dir = path.join(ext.extensionPath, "webview");
+// Known editors' extensions dirs + the RUNNING fork's own dir. The latter is
+// resolved from where the IDE says Claude Code lives, so a fork whose dotdir
+// isn't in the hardcoded list (the list stays as fallback for the shell
+// scripts, which have no runtime API) still gets patched.
+function extensionRoots() {
+  const roots = patcher.defaultExtensionRoots(os.homedir());
   try {
-    return fs.existsSync(dir) ? dir : null;
-  } catch (e) {
-    return null;
-  }
+    const ext = vscode.extensions.getExtension("anthropic.claude-code");
+    if (ext && ext.extensionPath) {
+      // <extensions-dir>/anthropic.claude-code-<ver>  →  <extensions-dir>
+      const dir = path.dirname(ext.extensionPath);
+      if (roots.indexOf(dir) === -1) roots.push(dir);
+    }
+  } catch (e) {}
+  return roots;
 }
 
-function patchFile(target, addition) {
-  let text = fs.readFileSync(target, "utf8");
-  const bak = target + ".rtl-backup";
-  if (!fs.existsSync(bak)) {
-    try {
-      fs.writeFileSync(bak, text);
-    } catch (e) {}
-  }
-  text = stripBlock(text);
-  if (text.length && !text.endsWith("\n")) text += "\n";
-  text += BEGIN + "\n" + addition + "\n" + END + "\n";
-  fs.writeFileSync(target, text);
-}
-
-function unpatchFile(target) {
-  if (!fs.existsSync(target)) return false;
-  const bak = target + ".rtl-backup";
-  if (fs.existsSync(bak)) {
-    try {
-      fs.copyFileSync(bak, target);
-      fs.unlinkSync(bak);
-      return true;
-    } catch (e) {}
-  }
-  const text = fs.readFileSync(target, "utf8");
-  if (text.indexOf(BEGIN) === -1) return false;
-  fs.writeFileSync(target, stripBlock(text));
-  return true;
+// ALL installed Claude Code version folders (an update keeps the old folder
+// running until the editor's own reload — both need the patch).
+function claudeWebviewDirs() {
+  return patcher.findWebviewDirs(extensionRoots());
 }
 
 // --- settings --------------------------------------------------------------
@@ -164,56 +146,140 @@ function buildJs(context, s) {
   return { js, fp };
 }
 
-function isPatched(dir) {
-  try {
-    return fs.readFileSync(path.join(dir, "index.css"), "utf8").indexOf(BEGIN) !== -1;
-  } catch (e) {
-    return false;
-  }
-}
-function isCurrent(dir, fp) {
-  try {
-    return fs.readFileSync(path.join(dir, "index.js"), "utf8").indexOf("rtlx-fp:" + fp) !== -1;
-  } catch (e) {
-    return false;
-  }
-}
-
 // --- apply / remove --------------------------------------------------------
 
-function apply(context, opts) {
+/**
+ * Patch every discovered install. Dirs already carrying the current
+ * fingerprint are skipped unless opts.force (the manual "re-apply now"
+ * actions force; the silent startup/watcher/settings paths don't).
+ * Returns { ok, wrote } — `wrote` = how many dirs were actually written.
+ */
+async function apply(context, opts) {
   opts = opts || {};
   const s = engineSettings();
-  if (!s.enabled) return { ok: false, reason: "disabled" };
-  const dir = claudeWebviewDir();
-  if (!dir) {
+  if (!s.enabled) return { ok: false, wrote: 0, reason: "disabled" };
+  const dirs = claudeWebviewDirs();
+  if (!dirs.length) {
     if (!opts.silent)
       vscode.window.showWarningMessage("RTL for Claude: the Claude Code extension was not found.");
-    return { ok: false, reason: "no-claude" };
+    return { ok: false, wrote: 0, reason: "no-claude" };
   }
-  try {
-    patchFile(path.join(dir, "index.css"), fs.readFileSync(asset(context, "styles.css"), "utf8"));
-    const jsPath = path.join(dir, "index.js");
-    if (fs.existsSync(jsPath)) patchFile(jsPath, buildJs(context, s).js);
-    fs.copyFileSync(asset(context, "Vazirmatn-Regular.woff2"), path.join(dir, FONT_DEST));
-    return { ok: true, dir };
-  } catch (e) {
+  const sources = {
+    css: fs.readFileSync(asset(context, "styles.css"), "utf8"),
+    fontPath: asset(context, "Vazirmatn-Regular.woff2"),
+  };
+  const built = buildJs(context, s);
+  sources.js = built.js;
+
+  let okCount = 0;
+  let wrote = 0;
+  const problems = [];
+  for (const dir of dirs) {
+    if (!opts.force && patcher.isPatched(dir) && patcher.isCurrent(dir, built.fp)) {
+      okCount++;
+      continue;
+    }
+    try {
+      const r = await patcher.patchWebviewDir(dir, sources);
+      if (r.ok) okCount++;
+      if (r.wrote) wrote++;
+      problems.push(...r.warnings);
+    } catch (e) {
+      problems.push(dir + ": " + e.message);
+    }
+  }
+  if (problems.length && !opts.silent)
+    vscode.window.showWarningMessage("RTL for Claude: " + problems[0]);
+  if (!okCount) {
     if (!opts.silent)
-      vscode.window.showErrorMessage("RTL for Claude: failed to patch — " + e.message);
-    return { ok: false, reason: e.message };
+      vscode.window.showErrorMessage(
+        "RTL for Claude: failed to patch — " + (problems[0] || "unknown error")
+      );
+    return { ok: false, wrote, reason: problems[0] || "patch failed" };
+  }
+  return { ok: true, wrote };
+}
+
+/** Undo every discovered install. Returns the number of files restored. */
+async function remove() {
+  let n = 0;
+  for (const dir of claudeWebviewDirs()) {
+    try {
+      n += await patcher.removeWebviewDir(dir);
+    } catch (e) {}
+  }
+  return n;
+}
+
+// --- update watcher (catch Claude Code updates mid-session) ----------------
+
+// When Claude Code updates, the editor extracts a NEW anthropic.claude-code-*
+// folder (un-patched). A non-recursive watch per extensions dir is cheap and
+// only fires on top-level entries — our own writes land in webview/ subfolders
+// and don't re-trigger it.
+let dirWatchers = [];
+let reinjectTimer = null;
+let watchGeneration = 0; // bumping it invalidates any in-flight retry loop
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    const t = setTimeout(resolve, ms);
+    if (t.unref) t.unref();
+  });
+}
+
+function startWatching(context) {
+  stopWatching();
+  for (const root of extensionRoots()) {
+    try {
+      const w = fs.watch(root, { persistent: false }, (_event, filename) => {
+        if (filename && String(filename).indexOf(patcher.CLAUDE_CODE_PREFIX) === 0)
+          scheduleReinject(context);
+      });
+      w.on("error", () => {});
+      dirWatchers.push(w);
+    } catch (e) {
+      // Root doesn't exist (editor not installed) — skip.
+    }
   }
 }
 
-function remove() {
-  const dir = claudeWebviewDir();
-  if (!dir) return 0;
-  let n = 0;
-  if (unpatchFile(path.join(dir, "index.css"))) n++;
-  if (unpatchFile(path.join(dir, "index.js"))) n++;
-  try {
-    fs.unlinkSync(path.join(dir, FONT_DEST));
-  } catch (e) {}
-  return n;
+function stopWatching() {
+  watchGeneration++;
+  if (reinjectTimer) {
+    clearTimeout(reinjectTimer);
+    reinjectTimer = null;
+  }
+  for (const w of dirWatchers) {
+    try {
+      w.close();
+    } catch (e) {}
+  }
+  dirWatchers = [];
+}
+
+function scheduleReinject(context) {
+  if (reinjectTimer) clearTimeout(reinjectTimer);
+  reinjectTimer = setTimeout(() => {
+    reinjectTimer = null;
+    reinjectWithRetries(context);
+  }, WATCH_DEBOUNCE_MS);
+}
+
+async function reinjectWithRetries(context) {
+  const gen = ++watchGeneration;
+  let patchedAny = false;
+  for (let attempt = 0; attempt < WATCH_RETRIES; attempt++) {
+    if (attempt) await delay(WATCH_RETRY_DELAY_MS);
+    if (gen !== watchGeneration) return; // torn down / superseded meanwhile
+    // Re-check the setting INSIDE every retry: a Disable that lands while
+    // we're waiting must win — never follow it with a re-patch.
+    const s = engineSettings();
+    if (!s.enabled || !s.autoApply) return;
+    if ((await apply(context, { silent: true })).wrote > 0) patchedAny = true;
+  }
+  if (patchedAny && gen === watchGeneration)
+    offerReload("Claude Code was updated — RTL re-applied. Reload to see it.");
 }
 
 // --- UI: status bar + reload prompt ----------------------------------------
@@ -243,13 +309,16 @@ function offerReload(message) {
 let applyTimer = null;
 function scheduleReapply(context) {
   if (applyTimer) clearTimeout(applyTimer);
-  applyTimer = setTimeout(() => {
+  applyTimer = setTimeout(async () => {
     applyTimer = null;
     if (engineSettings().enabled) {
-      if (apply(context, { silent: true }).ok)
+      startWatching(context); // re-arm after a disable→enable round-trip
+      if ((await apply(context, { silent: true })).ok)
         offerReload("RTL for Claude settings updated — reload to see them in the chat.");
-    } else if (remove() > 0) {
-      offerReload("RTL for Claude turned off — reload to restore the original chat.");
+    } else {
+      stopWatching(); // also cancels any in-flight update-retry loop
+      if ((await remove()) > 0)
+        offerReload("RTL for Claude turned off — reload to restore the original chat.");
     }
   }, 500);
 }
@@ -292,7 +361,7 @@ function makePanelProvider(context) {
       view = v;
       v.webview.options = { enableScripts: true };
       v.webview.html = panelHtml(context, v.webview);
-      v.webview.onDidReceiveMessage((m) => {
+      v.webview.onDidReceiveMessage(async (m) => {
         if (!m) return;
         if (m.type === "ready") this.post();
         else if (m.type === "set")
@@ -301,12 +370,12 @@ function makePanelProvider(context) {
             .update(m.key, m.value, vscode.ConfigurationTarget.Global);
         else if (m.type === "cmd") {
           if (m.name === "apply") {
-            const r = apply(context, {});
+            const r = await apply(context, { force: true });
             if (r.ok) offerReload("RTL for Claude applied — reload to see it.");
             else if (r.reason === "disabled")
               vscode.window.showInformationMessage("Turn RTL for Claude on first.");
           } else if (m.name === "remove") {
-            offerReload(remove() > 0 ? "RTL for Claude removed — reload to restore the chat." : "Nothing to remove.");
+            offerReload((await remove()) > 0 ? "RTL for Claude removed — reload to restore the chat." : "Nothing to remove.");
           } else if (m.name === "reload") {
             vscode.commands.executeCommand("workbench.action.reloadWindow");
           } else if (m.name === "openSettings") {
@@ -352,7 +421,7 @@ function activate(context) {
       else if (pick.action === "side") await c.update("showInActivityBar", !side, vscode.ConfigurationTarget.Global);
       else if (pick.action === "settings") vscode.commands.executeCommand("workbench.action.openSettings", "rtlForClaude");
       else if (pick.action === "apply") {
-        const r = apply(context, {});
+        const r = await apply(context, { force: true });
         if (r.ok) offerReload("RTL for Claude applied — reload to see it.");
         else if (r.reason === "disabled") vscode.window.showInformationMessage("Turn RTL for Claude on first.");
       }
@@ -365,14 +434,14 @@ function activate(context) {
       const c = vscode.workspace.getConfiguration("rtlForClaude");
       await c.update("showInActivityBar", !c.get("showInActivityBar", true), vscode.ConfigurationTarget.Global);
     }),
-    vscode.commands.registerCommand("rtlForClaude.apply", () => {
-      const r = apply(context, {});
+    vscode.commands.registerCommand("rtlForClaude.apply", async () => {
+      const r = await apply(context, { force: true });
       if (r.ok) offerReload("RTL for Claude applied — reload to see it.");
       else if (r.reason === "disabled")
         vscode.window.showInformationMessage("RTL for Claude is off. Turn it on first.");
     }),
-    vscode.commands.registerCommand("rtlForClaude.remove", () => {
-      offerReload(remove() > 0 ? "RTL for Claude removed — reload to restore the chat." : "RTL for Claude: nothing to remove.");
+    vscode.commands.registerCommand("rtlForClaude.remove", async () => {
+      offerReload((await remove()) > 0 ? "RTL for Claude removed — reload to restore the chat." : "RTL for Claude: nothing to remove.");
     }),
     vscode.commands.registerCommand("rtlForClaude.openSettings", () =>
       vscode.commands.executeCommand("workbench.action.openSettings", "rtlForClaude")
@@ -399,22 +468,28 @@ function activate(context) {
     })
   );
 
-  // Startup: re-apply if needed (Claude update wiped it, or settings changed).
-  // Deferred so it never blocks the activation chain.
-  setTimeout(() => {
-    const dir = claudeWebviewDir();
-    if (!dir) return;
+  // Startup: re-apply if needed (Claude update wiped it, or settings changed)
+  // across every discovered install, then arm the update watcher. Deferred so
+  // it never blocks the activation chain.
+  setTimeout(async () => {
     const s = engineSettings();
     if (s.enabled && s.autoApply) {
-      const { fp } = buildJs(context, s);
-      if (!isCurrent(dir, fp) && apply(context, { silent: true }).ok)
+      startWatching(context);
+      if ((await apply(context, { silent: true })).wrote > 0)
         offerReload("RTL for Claude is ready — reload to apply it to the chat.");
-    } else if (!s.enabled && isPatched(dir) && remove() > 0) {
-      offerReload("RTL for Claude is off — reload to restore the original chat.");
+    } else if (!s.enabled) {
+      if (claudeWebviewDirs().some((d) => patcher.isPatched(d)) && (await remove()) > 0)
+        offerReload("RTL for Claude is off — reload to restore the original chat.");
     }
   }, 0);
 }
 
-function deactivate() {}
+function deactivate() {
+  stopWatching();
+  if (applyTimer) {
+    clearTimeout(applyTimer);
+    applyTimer = null;
+  }
+}
 
 module.exports = { activate, deactivate };

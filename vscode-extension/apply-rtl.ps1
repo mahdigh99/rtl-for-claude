@@ -55,15 +55,18 @@ filter Where-StylePath {
     }
 }
 
-function Strip-Patch ($filePath) {
-    if (-not (Test-Path $filePath)) { return }
-    $content = [System.IO.File]::ReadAllText($filePath)
-    # Regex to match the block including the newlines
+function Strip-Content ($content) {
+    # Remove our marked block (always appended at end-of-file) from a string.
     $escapedBegin = [regex]::Escape($BeginMark)
     $escapedEnd = [regex]::Escape($EndMark)
     $pattern = "(?s)\r?\n?" + $escapedBegin + ".*?" + $escapedEnd + "\s*$"
-    $newContent = [regex]::Replace($content, $pattern, "")
-    [System.IO.File]::WriteAllText($filePath, $newContent)
+    return [regex]::Replace($content, $pattern, "")
+}
+
+function Strip-Patch ($filePath) {
+    if (-not (Test-Path $filePath)) { return }
+    $content = [System.IO.File]::ReadAllText($filePath)
+    [System.IO.File]::WriteAllText($filePath, (Strip-Content $content))
 }
 
 function Append-Block ($targetPath, $srcPaths) {
@@ -74,8 +77,9 @@ function Append-Block ($targetPath, $srcPaths) {
     if (-not (Test-Path $bak)) {
         Copy-Item -Path $targetPath -Destination $bak -Force
     }
-    Strip-Patch $targetPath
-    $targetContent = [System.IO.File]::ReadAllText($targetPath)
+    # Strip any previous version of our block in memory (idempotent re-apply);
+    # the target file itself is only replaced whole, via the Move-Item below.
+    $targetContent = Strip-Content ([System.IO.File]::ReadAllText($targetPath))
     if ($targetContent.Length -gt 0 -and -not $targetContent.EndsWith("`n")) {
         $targetContent += "`n"
     }
@@ -84,7 +88,18 @@ function Append-Block ($targetPath, $srcPaths) {
         $addition += [System.IO.File]::ReadAllText($src) + "`n"
     }
     $newContent = $targetContent + $BeginMark + "`n" + $addition + $EndMark + "`n"
-    [System.IO.File]::WriteAllText($targetPath, $newContent)
+    # Size guard: injection only ADDS bytes on top of the pristine original, so
+    # a result smaller than the backup means the current file is torn/truncated
+    # (e.g. by a crashed patcher). Keep the good backup, skip this file.
+    $newBytes = [System.Text.Encoding]::UTF8.GetByteCount($newContent)
+    $bakBytes = (Get-Item $bak).Length
+    if ($newBytes -lt $bakBytes) {
+        Write-Warning "skipped $targetPath - result ($newBytes B) smaller than its pristine backup ($bakBytes B): the file looks torn. Restore it from $bak, then re-run."
+        return
+    }
+    $tmp = "$targetPath.tmp.$PID"
+    [System.IO.File]::WriteAllText($tmp, $newContent)
+    Move-Item -Path $tmp -Destination $targetPath -Force
 }
 
 function Patch-One ($cssPath) {
