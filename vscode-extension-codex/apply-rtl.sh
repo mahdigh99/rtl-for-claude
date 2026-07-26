@@ -18,10 +18,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STYLES_SRC="$SCRIPT_DIR/assets/styles.css"
+MATH_SRC="$SCRIPT_DIR/assets/rtl-math.js"   # loaded BEFORE the driver (RTLXMath global)
 DRIVER_SRC="$SCRIPT_DIR/assets/driver.js"
 FONT_SRC="$SCRIPT_DIR/assets/vazirmatn-codex.woff2"
 
 ASSET_STYLES="rtl-codex-styles.css"
+ASSET_MATH="rtl-codex-math.js"
 ASSET_DRIVER="rtl-codex-driver.js"
 ASSET_FONT="vazirmatn-codex.woff2"
 
@@ -37,7 +39,7 @@ case "${1:-}" in
 esac
 
 if [ "$MODE" = "install" ]; then
-  for f in "$STYLES_SRC" "$DRIVER_SRC" "$FONT_SRC"; do
+  for f in "$STYLES_SRC" "$MATH_SRC" "$DRIVER_SRC" "$FONT_SRC"; do
     [ -f "$f" ] || { echo "ERROR: required source file not found: $f"; echo "Run this script from inside the vscode-extension-codex/ folder."; exit 1; }
   done
 fi
@@ -86,10 +88,10 @@ inject_html_patch() {
   local html="$1"
   local endnl=1
   [ -z "$(tail -c 1 "$html")" ] || endnl=0
-  awk -v b="$BEGIN_MARK" -v e="$END_MARK" -v styles="$ASSET_STYLES" -v driver="$ASSET_DRIVER" -v endnl="$endnl" '
+  awk -v b="$BEGIN_MARK" -v e="$END_MARK" -v styles="$ASSET_STYLES" -v mathjs="$ASSET_MATH" -v driver="$ASSET_DRIVER" -v endnl="$endnl" '
     { txt = txt $0 "\n" }
     END {
-      block = b "\n<link rel=\"stylesheet\" href=\"./assets/" styles "\">\n<script src=\"./assets/" driver "\"></script>\n" e "\n"
+      block = b "\n<link rel=\"stylesheet\" href=\"./assets/" styles "\">\n<script src=\"./assets/" mathjs "\"></script>\n<script src=\"./assets/" driver "\"></script>\n" e "\n"
       i = index(txt, "</head>")
       if (i > 0) {
         txt = substr(txt, 1, i - 1) block substr(txt, i)
@@ -111,6 +113,7 @@ patch_one() {
   # Copy assets.
   mkdir -p "$assets"
   cp "$STYLES_SRC" "$assets/$ASSET_STYLES"
+  cp "$MATH_SRC" "$assets/$ASSET_MATH"
   cp "$DRIVER_SRC" "$assets/$ASSET_DRIVER"
   cp "$FONT_SRC" "$assets/$ASSET_FONT"
 
@@ -136,7 +139,7 @@ unpatch_one() {
     strip_html_patch "$html"
   fi
 
-  rm -f "$assets/$ASSET_STYLES" "$assets/$ASSET_DRIVER" "$assets/$ASSET_FONT"
+  rm -f "$assets/$ASSET_STYLES" "$assets/$ASSET_MATH" "$assets/$ASSET_DRIVER" "$assets/$ASSET_FONT"
   echo "  unpatched: $dir"
 }
 

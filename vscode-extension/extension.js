@@ -150,14 +150,17 @@ function buildJs(context, s) {
     togglePlacement: s.togglePlacement,
     enabled: true,
   };
+  // rtl-math.js must precede driver.js — the driver reads the RTLXMath global
+  // at sweep time (and no-ops without it, so a math-less patch still works).
+  const math = fs.readFileSync(asset(context, "rtl-math.js"), "utf8");
   const driver = fs.readFileSync(asset(context, "driver.js"), "utf8");
   const head = "window.__RTLX_SETTINGS=" + JSON.stringify(settingsObj) + ";";
   const fp = crypto
     .createHash("sha1")
-    .update(head + "|" + driver.length)
+    .update(head + "|" + math.length + "|" + driver.length)
     .digest("hex")
     .slice(0, 12);
-  const js = "/* rtlx-fp:" + fp + " */\n" + head + "\n" + driver;
+  const js = "/* rtlx-fp:" + fp + " */\n" + head + "\n" + math + "\n" + driver;
   return { js, fp };
 }
 

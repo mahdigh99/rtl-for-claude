@@ -33,6 +33,51 @@
   var RTL_G = new RegExp(RTL_RE.source, "g");
   var LTR_G = /[A-Za-z\u00C0-\u024F\u0300-\u036F\u1E00-\u1EFF]/g;
 
+  var FORCE_ALL = "data-rtlx-force-all";
+  var ISLAND = "data-rtlx-island";
+  var TABLE = "data-rtlx-table";
+  var CELL = "data-rtlx-cell";
+
+  // --- persisted global pin --------------------------------------------------
+  // The Auto/RTL/LTR pin used to be in-memory only (`globalForce`) and reset on
+  // every webview reload. Persist it in the webview's localStorage and re-apply
+  // it here \u2014 synchronously, during script evaluation \u2014 so a pinned chat is
+  // pinned from the first paint. localStorage may be unavailable in a sandboxed
+  // webview; degrade to the old in-memory behaviour.
+  var STORE_KEY = "rtlx-global-force";
+  function loadForce() {
+    try {
+      var v = window.localStorage && localStorage.getItem(STORE_KEY);
+      return v === "rtl" || v === "ltr" ? v : "auto";
+    } catch (e) {
+      return "auto";
+    }
+  }
+  function saveForce(v) {
+    try {
+      if (!window.localStorage) return;
+      if (v === "auto") localStorage.removeItem(STORE_KEY);
+      else localStorage.setItem(STORE_KEY, v);
+    } catch (e) {}
+  }
+  var globalForce = loadForce(); // auto | rtl | ltr
+  if (globalForce !== "auto") document.documentElement.setAttribute(FORCE_ALL, globalForce);
+
+  // A `dir` the APP set (not us): the nearest dir'd ancestor-or-self below
+  // <html>/<body>. This driver never writes dir attributes, so any such host is
+  // native. If it already points the right way ("rtl", or "auto") the app
+  // handled this block \u2014 adding our classes on top would double-apply and
+  // fight future native updates; native dirs are never removed or overridden.
+  // A native dir="ltr" on genuinely RTL text is a gap we still fill.
+  function nativelyHandled(el) {
+    if (!el || !el.closest) return false;
+    var host = null;
+    try { host = el.closest("[dir]"); } catch (e) {}
+    if (!host || host === document.documentElement || host === document.body) return false;
+    var d = host.getAttribute("dir");
+    return d === "rtl" || d === "auto";
+  }
+
   function reportError(error) {
     if (window.console && typeof window.console.error === "function") {
       window.console.error("[RTL for Codex]", error);
@@ -89,7 +134,7 @@
         var el = nodes[i];
         if (isCodeBlock(el)) continue;
         var text = el.textContent || "";
-        var rtl = detectRtl(text);
+        var rtl = detectRtl(text) && !nativelyHandled(el);
         el.classList.toggle("rtlx-rtl", rtl);
         // Mark a stable ancestor for CSS scoping.
         var turn = el.closest("[data-virtualized-turn-content]");
@@ -121,7 +166,7 @@
       if (isCodeBlock(el)) continue;
       if (isMediaParagraph(el)) continue;
       var text = el.textContent || "";
-      var rtl = detectRtl(text);
+      var rtl = detectRtl(text) && !nativelyHandled(el);
       el.classList.toggle("rtlx-rtl", rtl);
       if (rtl) {
         var turn = el.closest("[data-virtualized-turn-content]");
@@ -145,9 +190,167 @@
     }
   }
 
+  // ---- math / LaTeX isolation (mirrors browser rtl-engine.js) ---------------
+
+  // True where the rendered base direction is (or will be) RTL — the only
+  // place bidi mirroring happens, hence the only place islands are needed.
+  function inRTLContext(el) {
+    var forced = document.documentElement.getAttribute(FORCE_ALL);
+    if (forced === "ltr") return false;
+    if (forced === "rtl") return true;
+    var host = null;
+    try {
+      host = el.closest(
+        ".rtlx-rtl, [data-rtlx-user-rtl], [data-rtlx-assistant-rtl], [" + TABLE + '="rtl"], [dir="rtl"]'
+      );
+    } catch (e) {}
+    return !!host;
+  }
+
+  /**
+   * Wrap raw-LaTeX and bare-arithmetic runs inside RTL prose in LTR-isolated
+   * spans, so "۲ + ۳ = ۵" / "2 + 3 = 5" don't bidi-mirror and "$x^2$" doesn't
+   * scramble. Segmentation lives in RTLXMath (rtl-math.js, loaded via its own
+   * <script> tag before this driver); no-ops gracefully when that global is
+   * absent so a CSS-only patch still works. DOM discipline: createTreeWalker +
+   * replaceChild on text nodes — never innerHTML — to stay gentle on React.
+   */
+  // fallow-ignore-next-line complexity -- straight port of the browser engine's walker
+  function isolateMath(root) {
+    var M = window.RTLXMath;
+    if (!M || !document.createTreeWalker) return;
+    if (!root || root.nodeType !== 1) return;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        var v = node.nodeValue;
+        if (!v || v.length < 3) return NodeFilter.FILTER_REJECT;
+        // Cheap pre-filter: a LaTeX hint ($ or \) OR digits near an operator.
+        var hasTex = v.indexOf("$") !== -1 || v.indexOf("\\") !== -1;
+        var hasNum = M.MATH_DIGIT_RE.test(v) && M.MATH_OP_RE.test(v);
+        if (!hasTex && !hasNum) return NodeFilter.FILTER_REJECT;
+        var p = node.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (p.hasAttribute(ISLAND)) return NodeFilter.FILTER_REJECT;
+        if (isCodeBlock(p)) return NodeFilter.FILTER_REJECT;
+        if (
+          p.closest(
+            "[" + ISLAND + '], [contenteditable]:not([contenteditable="false"]), [role="textbox"], textarea'
+          )
+        )
+          return NodeFilter.FILTER_REJECT;
+        // Rendered math (KaTeX/MathJax) is already isolated by the app.
+        if (p.closest('[class*="katex"], mjx-container, math')) return NodeFilter.FILTER_REJECT;
+        if (!inRTLContext(p)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    // Collect first — mutating during the walk invalidates the walker.
+    var targets = [];
+    var n;
+    var budget = 2000;
+    while ((n = walker.nextNode()) && budget-- > 0) targets.push(n);
+    for (var i = 0; i < targets.length; i++) {
+      var textNode = targets[i];
+      var segs = M.segmentText(textNode.nodeValue);
+      var hasMath = false;
+      for (var s = 0; s < segs.length; s++) {
+        if (segs[s].type === "math") { hasMath = true; break; }
+      }
+      if (!hasMath) continue;
+      var frag = document.createDocumentFragment();
+      for (var k = 0; k < segs.length; k++) {
+        if (segs[k].type === "math") {
+          var span = document.createElement("span");
+          span.setAttribute(ISLAND, "1");
+          // Inline styles as belt-and-suspenders with the stylesheet rule.
+          span.style.unicodeBidi = "isolate";
+          span.style.direction = "ltr";
+          span.textContent = segs[k].value;
+          frag.appendChild(span);
+        } else {
+          frag.appendChild(document.createTextNode(segs[k].value));
+        }
+      }
+      if (textNode.parentNode) textNode.parentNode.replaceChild(frag, textNode);
+    }
+  }
+
+  // ---- tables (mirrors browser rtl-engine.js) -------------------------------
+
+  /**
+   * Per-cell + whole-table direction: flip a Persian-column table as a whole
+   * (TABLE attr + CSS) and give counter-flow cells their own direction back
+   * (an English cell in an RTL table, a Persian cell in an LTR one) via CELL
+   * attr. Native dirs are only ever read, never written. Stands down entirely
+   * while the global pin is active — the pin wins wholesale.
+   */
+  // fallow-ignore-next-line complexity -- straight port of the browser engine's table pass
+  function processTables(root) {
+    var M = window.RTLXMath;
+    if (!M || !root || root.nodeType !== 1 || !root.querySelectorAll) return;
+    var forced = document.documentElement.getAttribute(FORCE_ALL);
+    if (forced === "rtl" || forced === "ltr") return;
+    var tables = root.querySelectorAll("table");
+    var budget = 40; // tables are heavier than blocks; keep each pass bounded
+    for (var i = 0; i < tables.length; i++) {
+      var t = tables[i];
+      if (budget-- <= 0) break;
+      if (t.closest('pre, code, [contenteditable]:not([contenteditable="false"])')) continue;
+
+      // Effective direction of the table as rendered.
+      var tdir;
+      if (t.getAttribute(TABLE) === "rtl") {
+        tdir = "rtl";
+      } else if (nativelyHandled(t)) {
+        tdir = "rtl"; // native already flipped it — per-cell work only
+      } else {
+        var headerCells = t.querySelectorAll("thead th");
+        if (!headerCells.length) {
+          var firstRow = t.querySelector("tr");
+          headerCells = firstRow ? firstRow.querySelectorAll("th, td") : [];
+        }
+        var headerDirs = [];
+        for (var h = 0; h < headerCells.length; h++) {
+          headerDirs.push(M.cellDir(headerCells[h].textContent || ""));
+        }
+        var rows = t.querySelectorAll("tbody tr");
+        if (!rows.length) {
+          rows = Array.prototype.slice.call(t.querySelectorAll("tr"), 1);
+        }
+        var firstColDirs = [];
+        for (var r = 0; r < rows.length; r++) {
+          var first = rows[r].querySelector("th, td");
+          firstColDirs.push(first ? M.cellDir(first.textContent || "") : null);
+        }
+        if (M.tableDirFromCells(headerDirs, firstColDirs) === "rtl") {
+          t.setAttribute(TABLE, "rtl");
+          tdir = "rtl";
+        } else {
+          tdir = "ltr";
+        }
+      }
+
+      // Per-cell counter-flow direction.
+      var cells = t.querySelectorAll("td, th");
+      var cbudget = 400;
+      for (var c = 0; c < cells.length; c++) {
+        var cell = cells[c];
+        if (cbudget-- <= 0) break;
+        var d = M.cellDir(cell.textContent || "");
+        var want =
+          tdir === "rtl" && d === "ltr" ? "ltr" :
+          tdir !== "rtl" && d === "rtl" ? "rtl" : null;
+        if (want) {
+          if (cell.getAttribute(CELL) !== want) cell.setAttribute(CELL, want);
+        } else if (cell.hasAttribute(CELL)) {
+          cell.removeAttribute(CELL);
+        }
+      }
+    }
+  }
+
   // ---- global toggle --------------------------------------------------------
   var gEl = null;
-  var globalForce = "auto"; // auto | rtl | ltr
   function gLabel() {
     if (!gEl) return;
     gEl.textContent = globalForce === "rtl" ? "⇥ RTL" : globalForce === "ltr" ? "⇤ LTR" : "⇌ Auto";
@@ -165,8 +368,9 @@
       e.stopPropagation();
       globalForce = globalForce === "auto" ? "rtl" : globalForce === "rtl" ? "ltr" : "auto";
       var de = document.documentElement;
-      if (globalForce === "auto") de.removeAttribute("data-rtlx-force-all");
-      else de.setAttribute("data-rtlx-force-all", globalForce);
+      if (globalForce === "auto") de.removeAttribute(FORCE_ALL);
+      else de.setAttribute(FORCE_ALL, globalForce);
+      saveForce(globalForce); // survive webview reloads
       gLabel();
       sweep();
     });
@@ -180,6 +384,10 @@
       markUserMessages();
       markAssistantMarkdown();
       applyInputDirection();
+      // Math/table passes run on this throttled sweep only and no-op without
+      // RTLXMath (rtl-math.js), so a CSS-only patch still works.
+      processTables(document.body);
+      isolateMath(document.body);
       ensureGlobalToggle();
     } catch (error) {
       reportError(error);

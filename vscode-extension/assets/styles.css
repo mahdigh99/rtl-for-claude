@@ -196,6 +196,41 @@
   text-align: left !important;
 }
 
+/* ---------------------------------------------------------------------------
+ * Math islands. The driver wraps raw LaTeX and bare arithmetic found inside
+ * RTL prose in [data-rtlx-island] spans (with matching inline styles); this
+ * rule is the durable copy so app CSS can never re-mirror "2 + 3 = 5".
+ * ------------------------------------------------------------------------- */
+[data-rtlx-island] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tables. A standalone RTL table (outside any [data-rtlx-seen] container) is
+ * flipped by the driver via data-rtlx-table; counter-flow cells get their own
+ * direction back via data-rtlx-cell. Specificity note: the two-attribute
+ * variants (0,2,0) out-rank the [data-rtlx-seen] :is(…td,th…) block rule
+ * (0,1,1), so a cell can win back its direction inside a SEEN container; the
+ * bare (0,1,0) variant loses to an explicit force pin (0,1,1) — by design, a
+ * user pin beats per-cell nuance (the driver also stands down while pinned).
+ * ------------------------------------------------------------------------- */
+table[data-rtlx-table="rtl"] {
+  direction: rtl !important;
+}
+[data-rtlx-seen] [data-rtlx-cell="ltr"],
+[data-rtlx-cell="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+[data-rtlx-seen] [data-rtlx-cell="rtl"],
+[data-rtlx-cell="rtl"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate !important;
+}
+
 /* --- per-message direction toggle (driver injects the button) ------------- */
 .rtlx-host { position: relative; }
 .rtlx-toggle {

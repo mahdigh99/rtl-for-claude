@@ -28,8 +28,12 @@ list_output="$(bash "$PATCHER" --list)"
 bash "$PATCHER" --install >/dev/null
 [[ "$(grep -c 'RTL-PATCH (begin)' "$webview/index.html")" -eq 1 ]]
 [[ -f "$assets/rtl-codex-styles.css" ]]
+[[ -f "$assets/rtl-codex-math.js" ]]
 [[ -f "$assets/rtl-codex-driver.js" ]]
 [[ -f "$assets/vazirmatn-codex.woff2" ]]
+# The math module's <script> must be injected and load BEFORE the driver's.
+grep -q 'rtl-codex-math.js' "$webview/index.html"
+[[ "$(tr '\n' ' ' < "$webview/index.html")" == *"rtl-codex-math.js"*"rtl-codex-driver.js"* ]]
 [[ -f "$webview/index.html.rtl-backup" ]]
 cmp -s "$test_root/original.html" "$webview/index.html.rtl-backup"
 
@@ -47,6 +51,7 @@ cmp -s "$test_root/original.html" "$webview/index.html"
 cmp -s "$test_root/original-min.html" "$webview_min/index.html"
 [[ ! -e "$webview/index.html.rtl-backup" ]]
 [[ ! -e "$assets/rtl-codex-styles.css" ]]
+[[ ! -e "$assets/rtl-codex-math.js" ]]
 [[ ! -e "$assets/rtl-codex-driver.js" ]]
 [[ ! -e "$assets/vazirmatn-codex.woff2" ]]
 

@@ -6,7 +6,7 @@
 # so the only working, fork-free fix is to patch the extension's own on-disk
 # files. We patch TWO files in each webview folder:
 #   • index.css  ← Vazirmatn font + RTL/code styles   (assets/styles.css)
-#   • index.js   ← RTL detection engine + driver      (assets/engine.js + driver.js)
+#   • index.js   ← math segmentation + RTL driver     (assets/rtl-math.js + driver.js)
 # This is the no-install path (default settings). For a settings UI + auto-
 # reapply after Claude updates, install the companion extension (same folder).
 #
@@ -22,7 +22,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STYLES_SRC="$SCRIPT_DIR/assets/styles.css"     # injected into index.css
-DRIVER_SRC="$SCRIPT_DIR/assets/driver.js"      # injected into index.js (self-contained)
+MATH_SRC="$SCRIPT_DIR/assets/rtl-math.js"      # injected into index.js BEFORE the driver
+DRIVER_SRC="$SCRIPT_DIR/assets/driver.js"      # injected into index.js (no-ops math without rtl-math.js)
 # Static regular woff2 (small, universally fine for a webview).
 FONT_SRC="$SCRIPT_DIR/assets/Vazirmatn-Regular.woff2"
 FONT_DEST_NAME="vazirmatn.woff2"
@@ -40,7 +41,7 @@ esac
 
 # Fail early and clearly if our own source files are missing/misplaced.
 if [ "$MODE" = "install" ]; then
-  for f in "$STYLES_SRC" "$DRIVER_SRC" "$FONT_SRC"; do
+  for f in "$STYLES_SRC" "$MATH_SRC" "$DRIVER_SRC" "$FONT_SRC"; do
     [ -f "$f" ] || { echo "ERROR: required source file not found: $f"; echo "Run this script from inside the vscode-extension/ folder."; exit 1; }
   done
 fi
@@ -95,7 +96,7 @@ patch_one() { # $1 = path to index.css
   append_block "$css" "$STYLES_SRC"
   cp "$FONT_SRC" "$dir/$FONT_DEST_NAME"
   if [ -f "$js" ]; then
-    append_block "$js" "$DRIVER_SRC"
+    append_block "$js" "$MATH_SRC" "$DRIVER_SRC"
     echo "  patched: $dir (index.css + index.js)"
   else
     echo "  patched CSS only (index.js not found): $css"

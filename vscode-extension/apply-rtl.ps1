@@ -8,6 +8,9 @@ param (
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $StylesSrc = Join-Path $ScriptDir "assets\styles.css"
+# rtl-math.js is injected into index.js BEFORE driver.js (the driver reads the
+# RTLXMath global and no-ops math isolation without it).
+$MathSrc = Join-Path $ScriptDir "assets\rtl-math.js"
 $DriverSrc = Join-Path $ScriptDir "assets\driver.js"
 $FontSrc = Join-Path $ScriptDir "assets\Vazirmatn-Regular.woff2"
 $FontDestName = "vazirmatn.woff2"
@@ -17,7 +20,7 @@ $EndMark = "/* ==== RTL-PATCH (end) ==== */"
 
 # Verify source files
 if (-not $Remove -and -not $List) {
-    foreach ($f in @($StylesSrc, $DriverSrc, $FontSrc)) {
+    foreach ($f in @($StylesSrc, $MathSrc, $DriverSrc, $FontSrc)) {
         if (-not (Test-Path $f)) {
             Write-Error "ERROR: Required source file not found: $f"
             exit 1
@@ -63,7 +66,9 @@ function Strip-Patch ($filePath) {
     [System.IO.File]::WriteAllText($filePath, $newContent)
 }
 
-function Append-Block ($targetPath, $srcPath) {
+function Append-Block ($targetPath, $srcPaths) {
+    # $srcPaths: one path or an array of paths, concatenated in order inside a
+    # single marked block (rtl-math.js must precede driver.js in index.js).
     if (-not (Test-Path $targetPath)) { return }
     $bak = $targetPath + ".rtl-backup"
     if (-not (Test-Path $bak)) {
@@ -74,8 +79,11 @@ function Append-Block ($targetPath, $srcPath) {
     if ($targetContent.Length -gt 0 -and -not $targetContent.EndsWith("`n")) {
         $targetContent += "`n"
     }
-    $addition = [System.IO.File]::ReadAllText($srcPath)
-    $newContent = $targetContent + $BeginMark + "`n" + $addition + "`n" + $EndMark + "`n"
+    $addition = ""
+    foreach ($src in @($srcPaths)) {
+        $addition += [System.IO.File]::ReadAllText($src) + "`n"
+    }
+    $newContent = $targetContent + $BeginMark + "`n" + $addition + $EndMark + "`n"
     [System.IO.File]::WriteAllText($targetPath, $newContent)
 }
 
@@ -86,7 +94,7 @@ function Patch-One ($cssPath) {
     Append-Block $cssPath $StylesSrc
     Copy-Item -Path $FontSrc -Destination (Join-Path $dir $FontDestName) -Force
     if (Test-Path $jsPath) {
-        Append-Block $jsPath $DriverSrc
+        Append-Block $jsPath @($MathSrc, $DriverSrc)
         Write-Host "  patched: $dir (index.css + index.js)" -ForegroundColor Green
     } else {
         Write-Host "  patched CSS only (index.js not found): $cssPath" -ForegroundColor Yellow
