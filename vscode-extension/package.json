@@ -44,6 +44,12 @@
     "vscode:uninstall": "node ./uninstall.js"
   },
   "contributes": {
+    "markdown.previewStyles": [
+      "./media/markdown-rtl.css"
+    ],
+    "markdown.previewScripts": [
+      "./media/markdown-rtl.js"
+    ],
     "commands": [
       {
         "command": "rtlForClaude.toggle",

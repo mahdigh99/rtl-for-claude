@@ -1,0 +1,66 @@
+# CI — the exact suite release.sh runs before shipping, on every push and PR.
+#
+# The headless-Chrome suites find the browser at /usr/bin/google-chrome, which
+# GitHub's ubuntu runners preinstall; if it ever disappears they skip cleanly
+# (each prints SKIP and exits 0), and the guard step below makes that loss
+# visible as a warning instead of silently green-but-thinner coverage.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Chrome availability
+        run: |
+          if google-chrome --version; then
+            echo "Headless DOM suites will run."
+          else
+            echo "::warning::No Chrome on this runner — the headless DOM suites will be SKIPPED, not failed."
+          fi
+
+      - name: Browser unit tests (node --test)
+        run: node --test browser-extension/tests/*.test.js
+
+      - name: Browser DOM suites (headless Chrome)
+        # Same loop as release.sh: every browser test except detect.test.js
+        # (already covered by node --test above) runs as its own script so its
+        # PASS/FAIL/SKIP summary lands in the log.
+        run: |
+          for t in browser-extension/tests/*.test.js; do
+            case "$t" in */detect.test.js) continue ;; esac
+            echo "▸ $t"
+            node "$t"
+          done
+
+      - name: VS Code extension suites (patcher lifecycle, drivers, panel)
+        run: |
+          for t in vscode-extension/tests/*.test.js; do
+            echo "▸ $t"
+            node "$t"
+          done
+
+      - name: Codex patcher lifecycle
+        run: bash vscode-extension-codex/tests/apply-rtl.test.sh
+
+      - name: Shell syntax (bash -n on every script)
+        run: |
+          status=0
+          while IFS= read -r -d '' s; do
+            echo "▸ $s"
+            bash -n "$s" || status=1
+          done < <(find . -name '*.sh' -not -path './.git/*' -print0)
+          exit "$status"

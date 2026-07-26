@@ -1,0 +1,55 @@
+/* ============================================================================
+ * markdown-rtl.css — companion sheet for markdown-rtl.js, injected through the
+ * official `markdown.previewStyles` contribution point.
+ *
+ * Only direction-related rules: code stays LTR inside RTL flow, and the
+ * geometry that VS Code's own preview sheet pins to the LEFT (list padding,
+ * the blockquote border) is re-expressed with logical properties so it
+ * mirrors correctly when a block flips to RTL. LTR documents are unaffected —
+ * every rule below is scoped to an RTL context or direction-neutral.
+ * ========================================================================== */
+
+/* Code is left-to-right by definition; isolate so an RTL paragraph around an
+   inline snippet doesn't reorder its neighbours. */
+pre, code, kbd, samp {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+pre { text-align: left; }
+
+/* Rendered math (the built-in preview ships KaTeX) manages its own bidi. */
+.katex, .katex-display, mjx-container {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Bullets and numbers on the correct side: the preview's own sheet (and the
+   UA default) pad the LEFT edge physically; logical padding follows the flip. */
+[dir="rtl"] :is(ul, ol), :is(ul, ol)[dir="rtl"] {
+  padding-left: 0;
+  padding-inline-start: 2em;
+}
+
+/* Blockquote: VS Code's preview draws `margin: 0 7px 0 5px; padding: 0 16px
+   0 10px; border-left: 5px solid …` — same box, expressed logically, so the
+   bar sits on the reading side in RTL. */
+blockquote[dir="rtl"], [dir="rtl"] blockquote {
+  border-left: none;
+  border-inline-start: 5px solid var(--vscode-textBlockQuote-border, rgba(127, 127, 127, 0.35));
+  margin: 0;
+  margin-inline: 5px 7px;
+  padding: 0;
+  padding-inline: 10px 16px;
+}
+
+/* Table cells align with their own resolved direction (a forced-LTR cell in
+   an RTL table aligns left, and vice versa). An explicit markdown column
+   alignment lands as an inline style and still wins. */
+[dir="rtl"] :is(th, td), :is(th, td)[dir="rtl"] {
+  text-align: start;
+}
+
+/* Task-list checkboxes: keep the box on the reading side of its label. */
+[dir="rtl"] .task-list-item-checkbox {
+  margin-inline-end: 0.4em;
+}

@@ -14,6 +14,7 @@
   --accent: #d97757; /* Claude-ish clay */
   --card: #26252e;
   --line: #36343f;
+  --danger: #e5484d;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -28,6 +29,7 @@
 * { box-sizing: border-box; }
 body {
   width: 320px;
+  max-width: 100vw; /* never force a horizontal scrollbar on a squeezed popup */
   margin: 0;
   padding: 14px 14px 10px;
   background: var(--bg);
@@ -42,13 +44,19 @@ body {
 
 hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
 
-.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* flex-wrap lets a control drop under its label instead of overflowing when
+   the popup is squeezed narrower than its design width. */
+.row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.row > span:first-child { flex: 1 1 auto; min-width: 0; }
 .row b { color: var(--accent); }
+/* Hostnames are Latin and must stay LTR as a unit inside an RTL sentence. */
+#host { unicode-bidi: isolate; }
 
 .block { margin: 10px 0; }
 .lbl { display: block; margin-bottom: 6px; color: var(--fg); }
-.lbl b { color: var(--accent); }
+.lbl b { color: var(--accent); unicode-bidi: isolate; }
 .hint { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+.hint.err { color: var(--danger); }
 
 select, input[type="range"] { width: 100%; }
 select {
@@ -56,7 +64,15 @@ select {
   border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px;
   font-family: inherit;
 }
+select.fit { width: auto; max-width: 100%; flex: 0 1 auto; }
 input[type="range"] { accent-color: var(--accent); }
+
+input[type="text"] {
+  background: var(--card); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
+  font-family: inherit; font-size: 12px; min-width: 0; max-width: 100%;
+}
+input[type="text"].wide { width: 100%; margin-top: 6px; }
 
 /* segmented control */
 .seg { display: flex; gap: 6px; }
@@ -67,7 +83,8 @@ input[type="range"] { accent-color: var(--accent); }
 }
 .seg-btn.active { color: #fff; background: var(--accent); border-color: var(--accent); }
 
-/* switches */
+/* switches — logical properties so the knob rests on the correct edge and the
+   checked travel mirrors in RTL (same design as the VS Code panel). */
 .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: 0 0 auto; }
 .switch.sm { width: 36px; height: 20px; }
 .switch input { opacity: 0; width: 0; height: 0; }
@@ -76,19 +93,46 @@ input[type="range"] { accent-color: var(--accent); }
   border-radius: 24px; transition: .2s;
 }
 .slider::before {
-  content: ""; position: absolute; height: 18px; width: 18px; right: 3px; top: 3px;
+  content: ""; position: absolute; height: 18px; width: 18px;
+  inset-inline-start: 3px; top: 3px;
   background: #fff; border-radius: 50%; transition: .2s;
 }
 .switch.sm .slider::before { height: 14px; width: 14px; }
 input:checked + .slider { background: var(--accent); }
-input:checked + .slider::before { transform: translateX(-18px); }
-.switch.sm input:checked + .slider::before { transform: translateX(-16px); }
+input:checked + .slider::before { transform: translateX(18px); }
+.switch.sm input:checked + .slider::before { transform: translateX(16px); }
+html[dir="rtl"] input:checked + .slider::before { transform: translateX(-18px); }
+html[dir="rtl"] .switch.sm input:checked + .slider::before { transform: translateX(-16px); }
 
-.ftr { display: flex; gap: 8px; margin-top: 12px; }
+/* custom sites */
+.add-site { display: flex; gap: 6px; flex-wrap: wrap; }
+.add-site input { flex: 1 1 140px; }
+.add-site button { flex: 0 0 auto; }
+.site-list { margin: 2px 0 8px; }
+.site-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; margin-bottom: 4px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+}
+.site-row b {
+  flex: 1 1 auto; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  color: var(--fg); font-weight: 500; font-size: 12px;
+  unicode-bidi: isolate; text-align: start;
+}
+.mini {
+  flex: 0 0 auto; padding: 2px 8px; border-radius: 6px; cursor: pointer;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); font-family: inherit; font-size: 11px;
+}
+.mini:hover { border-color: var(--accent); color: var(--accent); }
+.mini.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+.ftr { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .ghost {
   flex: 1; padding: 8px; border-radius: 8px; cursor: pointer;
   background: transparent; color: var(--fg);
   border: 1px solid var(--line); font-family: inherit; font-size: 12px;
 }
 .ghost:hover { border-color: var(--accent); }
-.ghost.danger:hover { border-color: #e5484d; color: #e5484d; }
+.ghost.danger:hover { border-color: var(--danger); color: var(--danger); }

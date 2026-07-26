@@ -43,9 +43,15 @@
 
   // --- settings -------------------------------------------------------------
 
+  // A `sites` value is a plain boolean for the built-ins and an object
+  // ({ enabled, custom: true, selector? }) for user-added custom sites.
+  function siteOn(v) {
+    return v && typeof v === "object" ? v.enabled !== false : v;
+  }
+
   function hostEnabled(s) {
     const host = baseHost();
-    if (host in s.sites) return s.sites[host];
+    if (host in s.sites) return siteOn(s.sites[host]);
     return s.sites["*"] !== false;
   }
 
@@ -145,16 +151,36 @@
 
   // Resolve the registrable site key even on subdomains (app.claude.ai →
   // claude.ai) so a known site keeps its content selector — and forceAll stays
-  // confined to messages — no matter which subdomain serves the app.
+  // confined to messages — no matter which subdomain serves the app. Custom
+  // sites added from the popup count as known sites too.
+  function siteKeys() {
+    const keys = Object.keys(SITE_SELECTORS);
+    for (const k of Object.keys(settings.sites || {})) {
+      if (k !== "*" && keys.indexOf(k) === -1) keys.push(k);
+    }
+    return keys;
+  }
+
   function baseHost() {
     const h = location.hostname.replace(/^www\./, "");
-    if (SITE_SELECTORS[h]) return h;
-    const k = Object.keys(SITE_SELECTORS).find((key) => h === key || h.endsWith("." + key));
+    const keys = siteKeys();
+    if (keys.indexOf(h) !== -1) return h;
+    const k = keys.find((key) => h === key || h.endsWith("." + key));
     return k || h;
   }
 
   function messageSelector() {
-    return SITE_SELECTORS[baseHost()] || null;
+    const key = baseHost();
+    // A custom site may carry its own content-selector override; validate it
+    // before trusting it — a typo must degrade to prose-only, never throw later.
+    const v = settings.sites && settings.sites[key];
+    if (v && typeof v === "object" && v.selector) {
+      try {
+        document.createDocumentFragment().querySelector(v.selector);
+        return v.selector;
+      } catch (e) { /* invalid selector saved somehow → fall through */ }
+    }
+    return SITE_SELECTORS[key] || null;
   }
 
   // --- global direction toggle (one floating button for the WHOLE chat) -----

@@ -9,14 +9,25 @@
   <body>
     <header class="hdr">
       <h1>RTL for Claude</h1>
-      <label class="switch" title="On / off">
+      <label class="switch" data-i18n-title="onOff" title="On / off">
         <input type="checkbox" id="enabled" />
         <span class="slider"></span>
       </label>
     </header>
 
     <section class="row">
-      <span>This site (<b id="host">—</b>)</span>
+      <span data-i18n="language">Language</span>
+      <select id="language" class="fit">
+        <option value="auto" data-i18n="langAuto">Auto (browser)</option>
+        <option value="en">English</option>
+        <option value="fa">فارسی</option>
+        <option value="ar">العربية</option>
+        <option value="ur">اردو</option>
+      </select>
+    </section>
+
+    <section class="row">
+      <span><span data-i18n="thisSite">This site</span> (<b id="host" dir="ltr">—</b>)</span>
       <label class="switch sm">
         <input type="checkbox" id="siteEnabled" />
         <span class="slider"></span>
@@ -26,24 +37,24 @@
     <hr />
 
     <section class="block">
-      <label class="lbl">Detection mode</label>
+      <label class="lbl" data-i18n="detectionMode">Detection mode</label>
       <div class="seg">
-        <button data-mode="ratio" class="seg-btn">Smart (ratio)</button>
-        <button data-mode="first-strong" class="seg-btn">First letter</button>
+        <button data-mode="ratio" class="seg-btn" data-i18n="detSmart">Smart (ratio)</button>
+        <button data-mode="first-strong" class="seg-btn" data-i18n="detFirst">First letter</button>
       </div>
-      <p class="hint">“Smart” is better for RTL paragraphs full of English terms.</p>
+      <p class="hint" data-i18n="modeHint">“Smart” is better for RTL paragraphs full of English terms.</p>
     </section>
 
     <section class="block" id="thresholdWrap">
-      <label class="lbl">RTL sensitivity: <b id="thresholdVal">30%</b></label>
+      <label class="lbl"><span data-i18n="sensitivity">RTL sensitivity</span>: <b id="thresholdVal">30%</b></label>
       <input type="range" id="threshold" min="0.1" max="0.7" step="0.05" />
-      <p class="hint">Lower = flips to RTL more easily.</p>
+      <p class="hint" data-i18n="sensitivityHint">Lower = flips to RTL more easily.</p>
     </section>
 
     <hr />
 
     <section class="row">
-      <span>Pretty RTL font (Vazirmatn)</span>
+      <span data-i18n="prettyFont">Pretty RTL font (Vazirmatn)</span>
       <label class="switch sm">
         <input type="checkbox" id="fontEnabled" />
         <span class="slider"></span>
@@ -51,29 +62,29 @@
     </section>
 
     <section class="block">
-      <label class="lbl">Font</label>
+      <label class="lbl" data-i18n="font">Font</label>
       <select id="fontFamily">
         <option value='"Vazirmatn RTLX", "Vazirmatn", Tahoma, sans-serif'>Vazirmatn</option>
         <option value='"Sahel", "Vazirmatn RTLX", Tahoma, sans-serif'>Sahel</option>
-        <option value='Tahoma, "Vazirmatn RTLX", sans-serif'>Tahoma (system)</option>
-        <option value='inherit'>Site's own font</option>
+        <option value='Tahoma, "Vazirmatn RTLX", sans-serif' data-i18n="fontTahoma">Tahoma (system)</option>
+        <option value='inherit' data-i18n="fontSite">Site's own font</option>
       </select>
     </section>
 
     <section class="block">
-      <label class="lbl">Text size: <b id="scaleVal">100%</b></label>
+      <label class="lbl"><span data-i18n="textSize">Text size</span>: <b id="scaleVal">100%</b></label>
       <input type="range" id="fontScale" min="0.9" max="1.4" step="0.05" />
     </section>
 
     <section class="block">
-      <label class="lbl">Line spacing: <b id="lhVal">1.85</b></label>
+      <label class="lbl"><span data-i18n="lineSpacing">Line spacing</span>: <b id="lhVal">1.85</b></label>
       <input type="range" id="lineHeight" min="1.4" max="2.4" step="0.05" />
     </section>
 
     <hr />
 
     <section class="row">
-      <span>Apply to the compose box</span>
+      <span data-i18n="applyToInput">Apply to the compose box</span>
       <label class="switch sm">
         <input type="checkbox" id="applyToInput" />
         <span class="slider"></span>
@@ -81,16 +92,32 @@
     </section>
 
     <section class="row">
-      <span>Floating direction button</span>
+      <span data-i18n="showToggles">Floating direction button</span>
       <label class="switch sm">
         <input type="checkbox" id="showToggles" />
         <span class="slider"></span>
       </label>
     </section>
 
+    <hr />
+
+    <section class="block">
+      <label class="lbl" data-i18n="customSites">Custom sites</label>
+      <div id="siteList" class="site-list" hidden></div>
+      <div class="add-site">
+        <input type="text" id="newHost" dir="ltr" spellcheck="false"
+               data-i18n-ph="hostPh" placeholder="e.g. chat.deepseek.com" />
+        <button id="addSite" class="ghost" data-i18n="addSite">Add</button>
+      </div>
+      <input type="text" id="newSelector" dir="ltr" spellcheck="false" class="wide"
+             data-i18n-ph="selectorPh" placeholder="Message CSS selector (optional)" />
+      <p class="hint" data-i18n="customSitesHint">Works on any AI chat — your browser will ask you to allow access.</p>
+      <p class="hint err" id="siteErr" hidden></p>
+    </section>
+
     <footer class="ftr">
-      <button id="reprocess" class="ghost">Re-apply to page</button>
-      <button id="reset" class="ghost danger">Reset</button>
+      <button id="reprocess" class="ghost" data-i18n="reprocess">Re-apply to page</button>
+      <button id="reset" class="ghost danger" data-i18n="reset">Reset</button>
     </footer>
 
     <script src="popup.js"></script>

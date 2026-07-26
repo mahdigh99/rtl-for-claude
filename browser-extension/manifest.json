@@ -6,13 +6,14 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "rtl-for-claude@mahdigh99",
-      "strict_min_version": "115.0",
+      "strict_min_version": "128.0",
       "data_collection_permissions": {
         "required": ["none"]
       }
     }
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting"],
+  "optional_host_permissions": ["https://*/*"],
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "RTL for Claude",
@@ -46,13 +47,7 @@
   "web_accessible_resources": [
     {
       "resources": ["fonts/*"],
-      "matches": [
-        "https://claude.ai/*",
-        "https://*.claude.ai/*",
-        "https://chatgpt.com/*",
-        "https://chat.openai.com/*",
-        "https://gemini.google.com/*"
-      ]
+      "matches": ["https://*/*"]
     }
   ]
 }
