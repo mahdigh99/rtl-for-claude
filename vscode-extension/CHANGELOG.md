@@ -3,6 +3,38 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [1.3.0] — 2026-07-27
+
+### Added
+- **Right-to-left Markdown preview.** VS Code's built-in preview now renders
+  Persian, Arabic, Urdu and Hebrew per block — lists, headings, quotes and
+  tables flip, code and formulas stay left-to-right, and a `dir` written in the
+  document always wins.
+- **Keyboard shortcuts.** `Cmd/Ctrl + Shift + 9` (inside the chat) cycles the
+  whole conversation Auto → RTL → LTR; `Cmd/Ctrl + Shift + 8` turns RTL on and
+  off; `Cmd/Ctrl + Shift + 7` re-applies it to the chat.
+- **Letter spacing** for RTL text (`rtlForClaude.font.letterSpacing`).
+- **The settings are translated** — Persian, Arabic and Urdu, like the panel.
+- Math and LaTeX are isolated so they no longer mirror inside Persian text, and
+  tables get per-cell direction — the same behaviour as the browser extension.
+
+### Changed
+- **RTL sensitivity now defaults to 0.1**, as in the browser extension. The
+  setting said 0.3 while the chat detected at 0.1 and ignored it; the threshold
+  and the detection mode now really take effect.
+- Where Claude already renders a message right-to-left itself, the extension
+  stays out of the way instead of styling on top of it.
+
+### Fixed
+- **The whole-chat Auto/RTL/LTR choice survives a reload** — it used to reset.
+- **RTL survives a Claude Code update mid-session** instead of disappearing
+  until the next window reload.
+- **Several open windows can no longer corrupt the Claude Code files**, and
+  turning the extension off (or *Restore original chat*) puts them back
+  byte-for-byte.
+- More forks are found (Cursor, Windsurf, Antigravity …) and every installed
+  Claude Code version is patched, not just the newest.
+
 ## [1.2.0] — 2026-07-25
 
 A translated settings panel and a batch of right-to-left correctness fixes for

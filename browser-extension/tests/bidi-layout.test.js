@@ -46,6 +46,9 @@ const CASES = [
   ["force-all=ltr | FA-first", 'data-rtlx-force-all="ltr"', FA_FIRST, "در واقع", "LEFT"],
   ["per-msg force | EN-first", 'data-rtlx-force="rtl"', EN_FIRST, "authorization", "RIGHT"],
   ["untouched     | EN-only ", "", EN_ONLY, "authorization", "LEFT"],
+  // Native coexistence: the SITE set dir="rtl" itself (no data-rtlx-seen).
+  // Our stylesheet must not break the native layout it opted into.
+  ["native dir    | FA-first", 'dir="rtl"', FA_FIRST, "در واقع", "RIGHT"],
 ];
 
 const page = `<meta charset="utf-8">

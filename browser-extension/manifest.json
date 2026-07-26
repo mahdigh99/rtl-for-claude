@@ -38,7 +38,7 @@
         "https://chat.openai.com/*",
         "https://gemini.google.com/*"
       ],
-      "js": ["src/rtl-engine.js", "src/content.js"],
+      "js": ["src/rtl-math.js", "src/rtl-engine.js", "src/content.js"],
       "css": ["src/styles.css"],
       "run_at": "document_idle"
     }

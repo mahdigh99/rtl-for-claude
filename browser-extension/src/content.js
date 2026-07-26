@@ -93,6 +93,13 @@
         } catch (e) {
           /* never let one bad node break the loop */
         }
+        // Math/LaTeX islands ONLY on this throttled/idle pass — never on the
+        // synchronous streaming path. isolateMath itself defers subtrees still
+        // marked [data-is-streaming="true"]; the end-of-stream attribute flip
+        // re-schedules the message, so the final pass catches everything.
+        try {
+          if (RTLX.isolateMath) RTLX.isolateMath(root, settings);
+        } catch (e) {}
       }
     };
     if ("requestIdleCallback" in window) requestIdleCallback(run, { timeout: 400 });
@@ -288,6 +295,9 @@
     // Initial pass over everything already on screen (the engine skips inputs).
     try {
       RTLX.processSubtree(document.body, settings);
+    } catch (e) {}
+    try {
+      if (RTLX.isolateMath) RTLX.isolateMath(document.body, settings);
     } catch (e) {}
     ensureGlobalToggle();
 

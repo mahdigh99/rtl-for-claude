@@ -140,6 +140,29 @@
   // Global pin from the floating toggle, set on <html> by content.js; CSS keys on
   // it to force the whole conversation one way without touching any node.
   const FORCE_ALL_ATTR = "data-rtlx-force-all";
+  // LTR-isolated math island (LaTeX or bare arithmetic) wrapped by isolateMath.
+  const ISLAND_ATTR = "data-rtlx-island";
+  // Table direction decided from its cells (standalone tables outside a SEEN
+  // container) and per-cell counter-flow direction.
+  const TABLE_ATTR = "data-rtlx-table";
+  const CELL_ATTR = "data-rtlx-cell";
+
+  // A `dir` the SITE set (not us): the nearest dir'd ancestor-or-self below
+  // <html>/<body> that carries none of our markers. claude.ai's own renderer is
+  // progressively stamping dir on markdown blocks; those are native and we must
+  // NEVER remove or double-apply on top of them — only fill gaps.
+  function nativeDirHost(el) {
+    if (!el || !el.closest) return null;
+    let host = null;
+    try { host = el.closest("[dir]"); } catch (e) {}
+    if (!host) return null;
+    const doc = el.ownerDocument || document;
+    if (host === doc.documentElement || host === doc.body) return null;
+    // dirs we set ourselves: stamped blocks and dir="auto" compose boxes.
+    if (host.hasAttribute(STAMP)) return null;
+    if (host.classList && host.classList.contains("rtlx-input")) return null;
+    return host;
+  }
 
   // The STABLE container that carries the one-way RTL flag. Reuse an ancestor
   // that ALREADY has the flag (sticky anchor); else the site's message container;
@@ -198,6 +221,16 @@
     // can never flicker.
     const container = seenContainer(el, settings);
     if (container && !container.hasAttribute(SEEN_ATTR) && detectDirection(text, settings) === "rtl") {
+      // COEXISTENCE with the site's own emerging RTL: if a native dir already
+      // covers this block and points the right way ("rtl", or "auto" which
+      // resolves right for this text), the site handled it — adding our SEEN
+      // styling on top would double-apply (and fight future native updates).
+      // A native dir="ltr" on genuinely RTL text is a gap we still fill.
+      const native = nativeDirHost(el);
+      if (native) {
+        const d = native.getAttribute("dir");
+        if (d === "rtl" || d === "auto") return false;
+      }
       container.setAttribute(SEEN_ATTR, "1");
       return true;
     }
@@ -243,6 +276,192 @@
     while ((n = walker.nextNode()) && budget-- > 0) {
       applyToBlock(n, settings);
     }
+    processTables(root, settings);
+  }
+
+  // --- math / LaTeX isolation ----------------------------------------------
+
+  // True where the rendered base direction is (or will be) RTL — the only
+  // place bidi mirroring happens, hence the only place islands are needed.
+  function inRTLContext(el) {
+    if (!el || !el.closest) return false;
+    const de = (el.ownerDocument || document).documentElement;
+    const forced = de && de.getAttribute(FORCE_ALL_ATTR);
+    if (forced === "ltr") return false;
+    if (forced === "rtl") return true;
+    let host = null;
+    try {
+      host = el.closest(
+        "[" + SEEN_ATTR + "], [" + TABLE_ATTR + '="rtl"], [dir="rtl"]',
+      );
+    } catch (e) {}
+    return !!host;
+  }
+
+  /**
+   * Wrap raw-LaTeX and bare-arithmetic runs inside RTL prose in LTR-isolated
+   * spans, so "۲ + ۳ = ۵" / "2 + 3 = 5" don't bidi-mirror into "۵ = ۳ + ۲" and
+   * "$x^2$" doesn't scramble. Delegates segmentation to RTLXMath (rtl-math.js)
+   * and no-ops when that global is absent, so embedders can adopt it lazily.
+   *
+   * DOM discipline: createTreeWalker + replaceChild on text nodes — never
+   * innerHTML — to stay gentle on React. Streaming messages
+   * ([data-is-streaming="true"]) are deferred: the app re-creates their text
+   * nodes per token, and the end-of-stream pass catches up anyway. Call this
+   * from a throttled/idle pass, not the synchronous mutation path.
+   */
+  function isolateMath(root, settings) {
+    const M = global.RTLXMath;
+    if (!M || typeof document === "undefined" || !document.createTreeWalker) return;
+    if (!root || root.nodeType !== Node.ELEMENT_NODE) {
+      root = root && root.parentElement;
+      if (!root) return;
+    }
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const v = node.nodeValue;
+        if (!v || v.length < 3) return NodeFilter.FILTER_REJECT;
+        // Cheap pre-filter: a LaTeX hint ($ or \) OR digits near an operator.
+        const hasTex = v.indexOf("$") !== -1 || v.indexOf("\\") !== -1;
+        const hasNum = M.MATH_DIGIT_RE.test(v) && M.MATH_OP_RE.test(v);
+        if (!hasTex && !hasNum) return NodeFilter.FILTER_REJECT;
+        const p = node.parentElement;
+        if (!p || SKIP_TAGS.has(p.tagName)) return NodeFilter.FILTER_REJECT;
+        if (p.hasAttribute(ISLAND_ATTR)) return NodeFilter.FILTER_REJECT;
+        if (
+          p.closest(
+            'pre, code, kbd, samp, [' + ISLAND_ATTR + '], ' +
+              '[contenteditable]:not([contenteditable="false"]), [role="textbox"]',
+          )
+        )
+          return NodeFilter.FILTER_REJECT;
+        // Rendered math (KaTeX/MathJax) is already isolated by the site.
+        if (p.closest('[class*="katex"], mjx-container, math')) return NodeFilter.FILTER_REJECT;
+        if (p.closest('[data-is-streaming="true"]')) return NodeFilter.FILTER_REJECT;
+        if (!inRTLContext(p)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    // Collect first — mutating during the walk invalidates the walker.
+    const targets = [];
+    let n;
+    let budget = 2000;
+    while ((n = walker.nextNode()) && budget-- > 0) targets.push(n);
+    for (const textNode of targets) {
+      const segs = M.segmentText(textNode.nodeValue);
+      let hasMath = false;
+      for (const s of segs) if (s.type === "math") { hasMath = true; break; }
+      if (!hasMath) continue;
+      const frag = document.createDocumentFragment();
+      for (const s of segs) {
+        if (s.type === "math") {
+          const span = document.createElement("span");
+          span.setAttribute(ISLAND_ATTR, "1");
+          // Inline styles so embedders without our stylesheet still isolate;
+          // styles.css repeats them with !important as belt-and-suspenders.
+          span.style.unicodeBidi = "isolate";
+          span.style.direction = "ltr";
+          span.textContent = s.value;
+          frag.appendChild(span);
+        } else {
+          frag.appendChild(document.createTextNode(s.value));
+        }
+      }
+      if (textNode.parentNode) textNode.parentNode.replaceChild(frag, textNode);
+    }
+  }
+
+  // --- tables ---------------------------------------------------------------
+
+  /**
+   * Per-cell + whole-table direction. Inside a SEEN container (or force-all
+   * rtl) the stylesheet already flips the table; here we (a) flip standalone
+   * RTL tables the container mechanism missed (TABLE_ATTR + CSS), and (b) give
+   * counter-flow cells their own direction back (an English cell in an RTL
+   * table, a Persian cell in an LTR one) via CELL_ATTR. Native dirs are only
+   * ever read, never written.
+   */
+  function processTables(root, settings) {
+    const M = global.RTLXMath;
+    if (!M || !root || root.nodeType !== Node.ELEMENT_NODE || !root.querySelectorAll) return;
+    const tables = [];
+    const seen = new Set();
+    function add(t) {
+      if (t && !seen.has(t)) { seen.add(t); tables.push(t); }
+    }
+    try {
+      if (root.tagName === "TABLE") add(root);
+      else if (root.closest) add(root.closest("table"));
+      root.querySelectorAll("table").forEach(add);
+    } catch (e) { return; }
+
+    const de = document.documentElement;
+    const forced = de && de.getAttribute(FORCE_ALL_ATTR);
+    // An explicit user pin forces the WHOLE conversation one way — per-table/
+    // per-cell nuance would fight it, so stand down entirely while pinned.
+    if (forced === "rtl" || forced === "ltr") return;
+    let budget = 40; // tables are heavier than blocks; keep each pass bounded
+    for (const t of tables) {
+      if (budget-- <= 0) break;
+      if (
+        t.closest &&
+        t.closest('pre, code, [contenteditable]:not([contenteditable="false"])')
+      )
+        continue;
+      const inSeen = !!(t.closest && t.closest("[" + SEEN_ATTR + "]"));
+      // Confine standalone flipping to real content when the site told us
+      // where content lives (same chrome-safety rule as block <div>s).
+      if (settings && settings.contentSelector && !inSeen) {
+        let inside = false;
+        try { inside = !!(t.closest && t.closest(settings.contentSelector)); } catch (e) {}
+        if (!inside) continue;
+      }
+
+      // Effective direction of the table as rendered.
+      let tdir;
+      if (inSeen || t.getAttribute(TABLE_ATTR) === "rtl") tdir = "rtl";
+      else {
+        const native = nativeDirHost(t);
+        if (native && native.getAttribute("dir") === "rtl") {
+          tdir = "rtl"; // native already flipped it — per-cell work only
+        } else {
+          let headerCells = Array.from(t.querySelectorAll("thead th"));
+          if (!headerCells.length) {
+            const firstRow = t.querySelector("tr");
+            if (firstRow) headerCells = Array.from(firstRow.querySelectorAll("th, td"));
+          }
+          const headerDirs = headerCells.map((c) => M.cellDir(c.textContent || ""));
+          let rows = Array.from(t.querySelectorAll("tbody tr"));
+          if (!rows.length) rows = Array.from(t.querySelectorAll("tr")).slice(1);
+          const firstColDirs = rows.map((r) => {
+            const cell = r.querySelector("th, td");
+            return cell ? M.cellDir(cell.textContent || "") : null;
+          });
+          if (M.tableDirFromCells(headerDirs, firstColDirs) === "rtl") {
+            t.setAttribute(TABLE_ATTR, "rtl");
+            tdir = "rtl";
+          } else {
+            tdir = "ltr";
+          }
+        }
+      }
+
+      // Per-cell counter-flow direction.
+      const cells = t.querySelectorAll("td, th");
+      let cbudget = 400;
+      for (const cell of cells) {
+        if (cbudget-- <= 0) break;
+        const d = M.cellDir(cell.textContent || "");
+        const want =
+          tdir === "rtl" && d === "ltr" ? "ltr" :
+          tdir !== "rtl" && d === "rtl" ? "rtl" : null;
+        if (want) {
+          if (cell.getAttribute(CELL_ATTR) !== want) cell.setAttribute(CELL_ATTR, want);
+        } else if (cell.hasAttribute(CELL_ATTR)) {
+          cell.removeAttribute(CELL_ATTR);
+        }
+      }
+    }
   }
 
   /**
@@ -285,6 +504,17 @@
         el.classList.remove("rtlx-input", "rtlx-input-rtl", "rtlx-input-ltr");
       });
     doc.querySelectorAll("[" + SEEN_ATTR + "]").forEach((el) => el.removeAttribute(SEEN_ATTR));
+    // Unwrap math islands back into plain text nodes (merge with neighbours).
+    doc.querySelectorAll("[" + ISLAND_ATTR + "]").forEach((el) => {
+      const parent = el.parentNode;
+      if (!parent) return;
+      parent.replaceChild(doc.createTextNode(el.textContent || ""), el);
+      if (parent.normalize) parent.normalize();
+    });
+    doc.querySelectorAll("[" + TABLE_ATTR + "], [" + CELL_ATTR + "]").forEach((el) => {
+      el.removeAttribute(TABLE_ATTR);
+      el.removeAttribute(CELL_ATTR);
+    });
     if (doc.documentElement) doc.documentElement.removeAttribute(FORCE_ALL_ATTR);
   }
 
@@ -293,6 +523,8 @@
     ownText,
     applyToBlock,
     processSubtree,
+    isolateMath,
+    processTables,
     applyToInput,
     teardown,
     BLOCK_TAGS,
@@ -300,5 +532,8 @@
     FORCE_ATTR,
     SEEN_ATTR,
     FORCE_ALL_ATTR,
+    ISLAND_ATTR,
+    TABLE_ATTR,
+    CELL_ATTR,
   };
 })(typeof window !== "undefined" ? window : this);

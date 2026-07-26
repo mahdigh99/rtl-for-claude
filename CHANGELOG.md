@@ -1,7 +1,62 @@
 # Changelog
 
-All notable changes to **RTL for Claude** (browser extension + VS Code extension).
+All notable changes to **RTL for Claude** (browser extension + VS Code extension + Claude Desktop patcher).
 This project follows [Semantic Versioning](https://semver.org).
+
+## [1.3.0] — 2026-07-27
+
+The biggest release since 1.0: **Claude Desktop on macOS**, **any AI chat site
+you add yourself**, an **RTL Markdown preview** in VS Code, and **keyboard
+shortcuts** everywhere.
+
+### Added
+
+- **Claude Desktop (macOS).** `desktop-app/apply-rtl.sh --install` builds a
+  patched copy at `~/Applications/Claude-RTL.app`; your original Claude.app is
+  never modified and keeps working. `--remove` deletes the copy. See
+  [desktop-app/README.md](desktop-app/README.md).
+- **Add your own sites** (browser). DeepSeek, Grok, Perplexity, Copilot — any
+  https chat site, with an optional CSS selector for where its messages live.
+  Access is requested for that one site and given back when you remove it.
+  Firefox now needs 128 or newer.
+- **Keyboard shortcuts.** `Ctrl/Cmd + Shift + 9` cycles the whole chat
+  Auto → RTL → LTR, `Ctrl/Cmd + Shift + 8` turns RTL on and off, and in VS Code
+  `Ctrl/Cmd + Shift + 7` re-applies it to the chat.
+- **The browser popup speaks four languages** — English, فارسی, العربية, اردو —
+  and flips to RTL itself for the last three. VS Code's settings are translated
+  too.
+- **Right-to-left Markdown preview in VS Code**, per block: lists, headings,
+  quotes and tables flip, code and formulas stay left-to-right, and a `dir` you
+  wrote yourself always wins.
+- **Use a font you already have installed** (browser) instead of the bundled
+  Vazirmatn — optionally only for RTL letters, so Latin text keeps the site's
+  own font. If the font isn't installed, the bundled one is used.
+- **Letter spacing** for RTL text in VS Code, next to size and line spacing.
+
+### Fixed
+
+- **Math no longer mirrors inside Persian text.** `2 + 3 = 5`, `۲ + ۳ = ۵` and
+  LaTeX now read in the right order; prices (`$5.99`), version numbers and IPs
+  are left alone.
+- **Tables.** A table whose cells are RTL now flips as a whole, and an English
+  cell inside it (or a Persian cell in an English table) keeps its own
+  direction.
+- **Where a site already handles RTL itself, we stay out of the way** instead
+  of styling on top of it.
+- **The whole-chat Auto/RTL/LTR choice survives a reload** in the Claude Code
+  and Codex chats — it used to reset to Auto.
+- **RTL survives a Claude Code update.** It used to disappear until the next
+  window reload.
+- **Several open editor windows can no longer corrupt the Claude Code files**,
+  and turning RTL off restores the originals byte-for-byte.
+- More editors are recognised (Cursor, Windsurf, Antigravity and other forks),
+  and every installed Claude Code version gets patched.
+
+### Changed
+
+- **RTL sensitivity now defaults to 0.1 everywhere.** The VS Code setting said
+  0.3 while the chat detected at 0.1 and ignored the setting; both the
+  threshold and the detection mode now really take effect.
 
 ## [1.2.0] — 2026-07-25
 
