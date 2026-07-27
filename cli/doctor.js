@@ -167,11 +167,13 @@ function report(checks) {
   const lines = [];
   let ok = true;
   for (const c of checks) {
-    lines.push((c.ok ? "  ✓ " : "  ✗ ") + c.label);
-    if (c.note) lines.push("      " + c.note);
+    // Indented to line up with the styled output of the shell scripts, so the
+    // whole session reads as one program rather than three.
+    lines.push((c.ok ? "    ✓ " : "    ✗ ") + c.label);
+    if (c.note) lines.push("        " + c.note);
     if (!c.ok) {
       ok = false;
-      if (c.fix) lines.push("      → " + c.fix.split("\n").join("\n      "));
+      if (c.fix) lines.push("        → " + c.fix.split("\n").join("\n        "));
     }
   }
   return { text: lines.join("\n"), ok };

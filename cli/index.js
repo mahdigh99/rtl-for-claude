@@ -22,7 +22,7 @@
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
-const { spawnSync } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 const doctor = require("./doctor");
 const ui = require("./ui");
 
@@ -32,10 +32,9 @@ const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"))
 const c = ui.makeColors(process.stdout);
 
 const say = (s) => console.log(s === undefined ? "" : s);
-const ok = (s) => say(c.green("✓ ") + s);
-const warn = (s) => say(c.yellow("! ") + s);
-const err = (s) => console.error(c.red("✗ ") + s);
-const rule = () => say(c.dim("  " + "─".repeat(46)));
+const ok = (s) => say("  " + c.green("✓") + " " + s);
+const warn = (s) => say("  " + c.yellow("!") + " " + s);
+const err = (s) => console.error("  " + c.red("✗") + " " + s);
 
 // --- the three things this can install --------------------------------------
 // `script` is relative to the package root; `args` are the script's own flags.
@@ -115,33 +114,57 @@ function usage() {
 
 // --- running the packaged scripts --------------------------------------------
 
-/** Run one of the shell scripts, streaming its output straight through. */
+/**
+ * Run one of the shell scripts.
+ *
+ * The output is piped rather than inherited so every line can be re-styled into
+ * the CLI's own vocabulary (ui.styleLine) — the scripts keep their plain
+ * `[+] / [*] / [!]` prefixes because people also run them by hand. Line
+ * buffered, so a long step still prints as it happens; `close` (not `exit`)
+ * resolves it, so nothing is lost after the last write.
+ */
 function runScript(target, args) {
-  const script = path.join(ROOT, TARGETS[target].script);
-  if (!fs.existsSync(script)) {
-    err("This package is incomplete: " + TARGETS[target].script + " is missing.");
-    err("Please report it at " + pkg.bugs.url);
-    return 1;
-  }
-  const r = spawnSync("bash", [script].concat(args || []), { stdio: "inherit" });
-  if (r.error) {
-    err("Could not run bash: " + r.error.message);
-    return 1;
-  }
-  return r.status === null ? 1 : r.status;
+  return new Promise((resolve) => {
+    const script = path.join(ROOT, TARGETS[target].script);
+    if (!fs.existsSync(script)) {
+      err("This package is incomplete: " + TARGETS[target].script + " is missing.");
+      err("Please report it at " + pkg.bugs.url);
+      return resolve(1);
+    }
+    const child = spawn("bash", [script].concat(args || []), {
+      stdio: ["inherit", "pipe", "pipe"],
+      // "$0" inside the script would be a path in the npx cache; tell it the
+      // command the user actually typed, so "run this again" advice is usable.
+      env: Object.assign({}, process.env, { RTLX_INVOKED_AS: "npx rtl-for-claude --" + target }),
+    });
+    ui.styleStream(child.stdout, process.stdout, c);
+    ui.styleStream(child.stderr, process.stderr, c);
+    child.on("error", (e) => {
+      err("Could not run bash: " + e.message);
+      resolve(1);
+    });
+    child.on("close", (code) => resolve(code === null ? 1 : code));
+  });
 }
 
 function installVsCodeExtension() {
+  ui.section("VS Code extension", c);
   const check = doctor.preflight("vscode-ext");
   if (!check.ok) {
     say(check.text);
     return 2;
   }
-  const cli = check.checks.find((c) => c.id === "code-cli").detail;
-  say("Installing " + EXTENSION_ID + " with " + cli + " …");
-  const r = spawnSync(cli, ["--install-extension", EXTENSION_ID], { stdio: "inherit" });
+  const cli = check.checks.find((x) => x.id === "code-cli").detail;
+  say("    " + c.dim("· installing " + EXTENSION_ID + " with " + cli + " …"));
+  const r = spawnSync(cli, ["--install-extension", EXTENSION_ID], {
+    stdio: ["inherit", "pipe", "pipe"],
+    encoding: "utf8",
+  });
+  for (const line of String((r.stdout || "") + (r.stderr || "")).split("\n")) {
+    if (line.trim()) say(ui.styleLine(line, c));
+  }
   if (r.status === 0) {
-    ok("Installed. Run \"Developer: Reload Window\" in the editor to see it.");
+    ok("Installed. Run " + c.bold("Developer: Reload Window") + " in the editor to see it.");
     return 0;
   }
   err("The editor's CLI reported an error. You can also install it from inside");
@@ -162,13 +185,12 @@ function installVsCodeExtension() {
 async function confirm(target, removing, yes) {
   const t = TARGETS[target];
   say();
-  say("  " + (removing ? c.yellow("Remove") : c.accent("Install")) + "  " + c.bold(t.title));
-  rule();
+  ui.section((removing ? "Remove " : "Install ") + t.title, c);
   for (const line of (removing ? "This restores everything to how it was." : t.what).split("\n"))
-    say("  " + line);
+    say("    " + line);
   if (!removing) {
     say();
-    say(c.dim("  Undo any time with:  ") + t.undo);
+    say(c.dim("    Undo any time with:  ") + t.undo);
   }
   say();
   if (yes) return "yes";
@@ -194,8 +216,9 @@ async function doAction(target, opts) {
     say("Nothing was changed.");
     return answer === "no" ? 0 : 2;
   }
+  ui.section((opts.remove ? "Removing " : "Installing ") + TARGETS[target].title, c);
+  const code = await runScript(target, [opts.remove ? "--remove" : "--install"]);
   say();
-  const code = runScript(target, [opts.remove ? "--remove" : "--install"]);
   if (code === 0 && !opts.remove) {
     say();
     if (target === "desktop") ok("Open " + c.bold("Claude-RTL") + " from your Applications folder.");
@@ -205,16 +228,16 @@ async function doAction(target, opts) {
   return code;
 }
 
-function showStatus() {
+async function showStatus() {
   for (const key of Object.keys(TARGETS)) {
-    say();
-    say("  " + c.bold(TARGETS[key].title));
+    ui.section(TARGETS[key].title, c);
     if (key === "desktop" && process.platform !== "darwin") {
-      say("  (macOS only)");
+      say("    " + c.dim("· macOS only"));
       continue;
     }
-    runScript(key, ["--list"]);
+    await runScript(key, ["--list"]);
   }
+  say();
   // A report, not a verdict: "not installed" is a perfectly fine answer, so
   // this never fails — callers that need a verdict use --doctor.
   return 0;
@@ -244,15 +267,25 @@ function header() {
   say();
 }
 
-async function menu() {
-  header();
+/**
+ * One pass of the menu. Returns the chosen action, or null to leave.
+ * The dispatch lives in `interactive()` so picking something returns HERE
+ * afterwards — an installer that exits after one action makes you re-run it to
+ * check the result you just produced.
+ */
+function menu() {
   const installed = desktopInstalled();
-  const choice = await ui.select({
+  return ui.select({
     title: "What would you like to do?",
     items: [
       {
         label: TARGETS.desktop.title,
-        hint: process.platform !== "darwin" ? "macOS only" : installed ? "installed — reinstall" : "the Claude app itself",
+        hint:
+          process.platform !== "darwin"
+            ? "macOS only"
+            : installed
+              ? "installed — reinstall"
+              : "the Claude app itself",
         value: "desktop",
       },
       { label: "VS Code extension", hint: "recommended for the Claude Code chat", value: "vscode-ext" },
@@ -262,20 +295,10 @@ async function menu() {
       { label: "Check what is installed", value: "status" },
       { label: "Remove something", value: "remove" },
       { label: "Check prerequisites", hint: "changes nothing", value: "doctor" },
-      { label: "Quit", value: "quit" },
+      { label: "Quit", value: null },
     ],
     colors: c,
   });
-
-  switch (choice) {
-    case "desktop": case "claude-code": case "codex":
-      return doAction(choice, { yes: false, remove: false });
-    case "vscode-ext": return installVsCodeExtension();
-    case "status": return showStatus();
-    case "remove": return removeMenu();
-    case "doctor": return runDoctor();
-    default: return 0; // Quit, Esc, q or Ctrl-C
-  }
 }
 
 async function removeMenu() {
@@ -294,10 +317,37 @@ async function removeMenu() {
   return doAction(choice, { yes: false, remove: true });
 }
 
+/** The menu loop. Ends only when the user asks it to. */
+async function interactive() {
+  header();
+  let last = 0;
+  for (;;) {
+    const choice = await menu();
+    if (!choice) {
+      say(c.dim("  Bye."));
+      say();
+      return last;
+    }
+    if (choice === "status") last = await showStatus();
+    else if (choice === "remove") last = await removeMenu();
+    else if (choice === "doctor") last = runDoctor();
+    else if (choice === "vscode-ext") last = installVsCodeExtension();
+    else last = await doAction(choice, { yes: false, remove: false });
+
+    // Let the user read what just happened before the menu paints over it.
+    say();
+    await ui.question(c.dim("  Press Enter for the menu, or q to quit … ")).then((answer) => {
+      if (answer === "q") {
+        say();
+        process.exit(last || 0);
+      }
+    });
+    say();
+  }
+}
+
 function runDoctor() {
-  say();
-  say("  " + c.bold("Prerequisites"));
-  rule();
+  ui.section("Prerequisites", c);
   const r = doctor.report(doctor.allChecks());
   say(r.text);
   say();
@@ -335,7 +385,7 @@ async function main() {
     return 2;
   }
 
-  if (args.status) return showStatus();
+  if (args.status) return showStatus();  // async
   if (args.action) return doAction(args.action, { remove: args.remove, yes: args.yes });
 
   if (!process.stdin.isTTY) {
@@ -343,7 +393,7 @@ async function main() {
     usage();
     return 2;
   }
-  return menu();
+  return interactive();
 }
 
 main()

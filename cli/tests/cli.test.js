@@ -249,6 +249,28 @@ async function drive(keys, items) {
   ok((await pending) === "two", "without raw mode it falls back to a numbered prompt");
   ok(/1\) First/.test(text), "…and prints the numbers");
 
+  // Output styling: the shell scripts keep their own plain vocabulary, and the
+  // CLI re-renders it. Anything unrecognised must survive, not be swallowed.
+  const plain = ui.makeColors({ isTTY: false });
+  const styled = (line) => ui.stripAnsi(ui.styleLine(line, plain));
+  ok(styled("  [+] original: /Applications/Claude.app") === "    ✓ original: /Applications/Claude.app",
+    "[+] becomes a check mark");
+  ok(styled("  [*] copying …") === "    · copying …", "[*] becomes a bullet");
+  ok(styled("  [!] careful") === "    ! careful", "[!] stays a warning");
+  ok(styled("  [X] it broke") === "    ✗ it broke", "[X] becomes a cross");
+  ok(styled("ERROR: nope") === "    ✗ nope" && styled("WARNING: hmm") === "    ! hmm",
+    "ERROR/WARNING prefixes are recognised too");
+  ok(styled("  patched: /some/dir") === "    ✓ /some/dir", "'patched:' reads as done");
+  ok(styled("3 webview folder(s) would be patched.") === "    · 3 webview folder(s) can be patched",
+    "the summary line is rewritten in plain language");
+  ok(styled("/Users/x/.vscode/extensions/foo/webview") === "    /Users/x/.vscode/extensions/foo/webview",
+    "a bare path is kept (dimmed), not dropped");
+  ok(styled("something nobody predicted") === "    something nobody predicted",
+    "an unrecognised line is passed through, only indented");
+  ok(ui.styleLine("   ", plain) === "", "blank lines stay blank");
+  ok(ui.stripAnsi(ui.styleLine("[+] x", ui.makeColors({ isTTY: true, columns: 80 }))).indexOf("✓") !== -1,
+    "styling survives with colour on");
+
   // Colour discipline.
   const noColor = ui.makeColors({ isTTY: true });
   const savedNo = process.env.NO_COLOR;

@@ -200,4 +200,74 @@ async function confirm(prompt, input, output) {
   return answer === "y" || answer === "yes";
 }
 
-module.exports = { makeColors, box, select, question, confirm, canPrompt, stripAnsi, width };
+// --- framing the output of the shell scripts ---------------------------------
+
+/**
+ * A section heading, so the menu and the scripts' output read as one program.
+ */
+function section(title, c, output) {
+  const out = output || process.stdout;
+  out.write("\n  " + c.accent("●") + " " + c.bold(title) + "\n");
+  out.write("  " + c.dim("─".repeat(Math.min(((out.columns || 80) - 4), 60))) + "\n");
+}
+
+/**
+ * Re-style one line of a shell script's output.
+ *
+ * The scripts are also run by hand (that is the whole "transparent path"), so
+ * they keep their own plain `[+] / [*] / [!] / [X]` vocabulary. Here we strip
+ * whatever colour they emitted and re-render it in the CLI's own language, so
+ * one program doesn't speak two dialects. Anything unrecognised is passed
+ * through untouched but indented — never swallowed, because a message we
+ * didn't anticipate is exactly the one the user needs to see.
+ */
+function styleLine(line, c) {
+  const raw = stripAnsi(line).replace(/\s+$/, "");
+  if (!raw.trim()) return "";
+  const t = raw.trim();
+  let m;
+  if ((m = t.match(/^\[\+\]\s*(.*)$/))) return "    " + c.green("✓") + " " + m[1];
+  if ((m = t.match(/^\[\*\]\s*(.*)$/))) return "    " + c.dim("·") + " " + m[1];
+  if ((m = t.match(/^\[!\]\s*(.*)$/))) return "    " + c.yellow("!") + " " + c.yellow(m[1]);
+  if ((m = t.match(/^\[[Xx]\]\s*(.*)$/))) return "    " + c.red("✗") + " " + c.red(m[1]);
+  if ((m = t.match(/^(ERROR|WARNING):\s*(.*)$/i)))
+    return "    " + (/^E/i.test(m[1]) ? c.red("✗") : c.yellow("!")) + " " + m[2];
+  if ((m = t.match(/^patched:\s*(.*)$/))) return "    " + c.green("✓") + " " + m[1];
+  if ((m = t.match(/^unpatched:\s*(.*)$/))) return "    " + c.dim("·") + " restored " + m[1];
+  if ((m = t.match(/^\(no patch present\):\s*(.*)$/))) return "    " + c.dim("· not patched  " + m[1]);
+  // Bare filesystem paths are context, not news.
+  if (/^\//.test(t)) return "    " + c.dim(t);
+  if ((m = t.match(/^Done \((.*)\)\.\s*(.*)$/))) return "    " + c.green("✓") + " " + m[1] + ". " + m[2];
+  if ((m = t.match(/^(\d+) webview folder\(s\) would be patched\.$/)))
+    return "    " + c.dim("·") + " " + c.accent(m[1]) + " webview folder(s) can be patched";
+  if ((m = t.match(/^(Removed from .*|No .* extension found.*|Install the .*)$/))) return "    " + c.dim(m[1]);
+  return "    " + t;
+}
+
+/**
+ * Stream `readable` line by line through styleLine into `output`.
+ * Line-buffered so a long-running script (the desktop install takes a minute)
+ * still prints as it goes instead of all at once at the end.
+ */
+function styleStream(readable, output, c, onDone) {
+  let buf = "";
+  readable.setEncoding("utf8");
+  readable.on("data", (chunk) => {
+    buf += chunk;
+    let i;
+    while ((i = buf.indexOf("\n")) !== -1) {
+      const line = buf.slice(0, i);
+      buf = buf.slice(i + 1);
+      output.write(styleLine(line, c) + "\n");
+    }
+  });
+  readable.on("end", () => {
+    if (buf.length) output.write(styleLine(buf, c) + "\n");
+    if (onDone) onDone();
+  });
+}
+
+module.exports = {
+  makeColors, box, select, question, confirm, canPrompt, stripAnsi, width,
+  section, styleLine, styleStream,
+};

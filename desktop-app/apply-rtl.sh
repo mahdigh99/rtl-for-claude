@@ -49,6 +49,10 @@ DRIVER_SRC="$SCRIPT_DIR/assets/driver.js"
 STYLES_SRC="$SCRIPT_DIR/assets/styles.css"
 
 SOURCE_APP="${RTLX_SOURCE_APP:-/Applications/Claude.app}"
+# How to tell the user to run this again. When the npm installer wrapped us,
+# "$0" points at a file inside a node_modules cache — useless advice — so it
+# passes the command the user actually typed.
+SELF_CMD="${RTLX_INVOKED_AS:-$0}"
 PATCHED_APP="${RTLX_PATCHED_APP:-$HOME/Applications/Claude-RTL.app}"
 PATCHED_ASAR="$PATCHED_APP/Contents/Resources/app.asar"
 PATCHED_PLIST="$PATCHED_APP/Contents/Info.plist"
@@ -359,7 +363,7 @@ install_patch() {
   ok "installed: $PATCHED_APP"
   log "launch it from ~/Applications (shows as “Claude-RTL”). The original Claude.app is untouched."
   log "first launch may re-ask keychain/permissions once (signature changed — expected)."
-  log "after every Claude Desktop update, re-run: $0 --install"
+  log "after every Claude Desktop update, re-run: $SELF_CMD"
 }
 
 # --- remove --------------------------------------------------------------------
@@ -399,13 +403,13 @@ list_status() {
         ok "  integrity: hash matches the asar header — the app should start"
       else
         warn "  integrity: MISMATCH (Info.plist $want vs asar ${have:-unreadable})"
-        warn "  the app will refuse to start — re-run '$0 --install' to rebuild the copy."
+        warn "  the app will refuse to start — re-run '$SELF_CMD' to rebuild the copy."
       fi
     fi
     if [ "$(plist_get "$PATCHED_APP/Contents/Info.plist" CFBundleShortVersionString)" != \
          "$(plist_get "$SOURCE_APP/Contents/Info.plist" CFBundleShortVersionString)" ] \
        && [ -d "$SOURCE_APP" ]; then
-      warn "  the original has since been updated — re-run '$0 --install' to refresh the copy."
+      warn "  the original has since been updated — re-run '$SELF_CMD' to refresh the copy."
     fi
   else
     log "patched copy: not installed ($PATCHED_APP)"
