@@ -21,21 +21,21 @@
 
 const path = require("path");
 const fs = require("fs");
-const readline = require("readline");
+const os = require("os");
 const { spawnSync } = require("child_process");
 const doctor = require("./doctor");
+const ui = require("./ui");
 
 const ROOT = path.join(__dirname, ".."); // package root == repo layout
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
 
-const C = process.stdout.isTTY
-  ? { b: "\x1b[1m", dim: "\x1b[2m", g: "\x1b[32m", y: "\x1b[33m", r: "\x1b[31m", x: "\x1b[0m" }
-  : { b: "", dim: "", g: "", y: "", r: "", x: "" };
+const c = ui.makeColors(process.stdout);
 
 const say = (s) => console.log(s === undefined ? "" : s);
-const ok = (s) => say(C.g + "✓ " + C.x + s);
-const warn = (s) => say(C.y + "! " + C.x + s);
-const err = (s) => console.error(C.r + "✗ " + C.x + s);
+const ok = (s) => say(c.green("✓ ") + s);
+const warn = (s) => say(c.yellow("! ") + s);
+const err = (s) => console.error(c.red("✗ ") + s);
+const rule = () => say(c.dim("  " + "─".repeat(46)));
 
 // --- the three things this can install --------------------------------------
 // `script` is relative to the package root; `args` are the script's own flags.
@@ -95,7 +95,7 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  say(C.b + "rtl-for-claude " + pkg.version + C.x + " — right-to-left text in Claude");
+  say(c.bold("rtl-for-claude " + pkg.version) + " — right-to-left text in Claude");
   say();
   say("  npx rtl-for-claude                 interactive menu");
   say();
@@ -109,8 +109,8 @@ function usage() {
   say("  --yes                              don't ask for confirmation");
   say("  --version, --help");
   say();
-  say(C.dim + "  Everything runs locally and is reversible. Source:" + C.x);
-  say(C.dim + "  https://github.com/mahdigh99/rtl-for-claude" + C.x);
+  say(c.dim("  Everything runs locally and is reversible. Source:"));
+  say(c.dim("  https://github.com/mahdigh99/rtl-for-claude"));
 }
 
 // --- running the packaged scripts --------------------------------------------
@@ -151,16 +151,6 @@ function installVsCodeExtension() {
 
 // --- confirmation -------------------------------------------------------------
 
-function ask(question) {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(String(answer || "").trim().toLowerCase());
-    });
-  });
-}
-
 /**
  * Destructive actions state what they will do and wait for a yes. Skipped by
  * --yes, and impossible without a TTY (a piped stdin can't answer).
@@ -172,19 +162,21 @@ function ask(question) {
 async function confirm(target, removing, yes) {
   const t = TARGETS[target];
   say();
-  say(C.b + (removing ? "Remove: " : "Install: ") + t.title + C.x);
-  say();
+  say("  " + (removing ? c.yellow("Remove") : c.accent("Install")) + "  " + c.bold(t.title));
+  rule();
   for (const line of (removing ? "This restores everything to how it was." : t.what).split("\n"))
     say("  " + line);
+  if (!removing) {
+    say();
+    say(c.dim("  Undo any time with:  ") + t.undo);
+  }
   say();
-  if (!removing) say(C.dim + "  Undo any time with:  " + t.undo + C.x);
   if (yes) return "yes";
   if (!process.stdin.isTTY) {
     err("Not a terminal — re-run with --yes to confirm non-interactively.");
     return "cannot-ask";
   }
-  const answer = await ask("\nContinue? [y/N] ");
-  return answer === "y" || answer === "yes" ? "yes" : "no";
+  return (await ui.confirm("  " + c.bold("Continue?") + c.dim(" [y/N] "))) ? "yes" : "no";
 }
 
 async function doAction(target, opts) {
@@ -206,9 +198,9 @@ async function doAction(target, opts) {
   const code = runScript(target, [opts.remove ? "--remove" : "--install"]);
   if (code === 0 && !opts.remove) {
     say();
-    if (target === "desktop") ok("Open \"Claude-RTL\" from your Applications folder.");
-    else ok("Run \"Developer: Reload Window\" in the editor to see it.");
-    say(C.dim + "Undo:  " + TARGETS[target].undo + C.x);
+    if (target === "desktop") ok("Open " + c.bold("Claude-RTL") + " from your Applications folder.");
+    else ok("Run " + c.bold("Developer: Reload Window") + " in the editor to see it.");
+    say(c.dim("  Undo:  " + TARGETS[target].undo));
   }
   return code;
 }
@@ -216,7 +208,7 @@ async function doAction(target, opts) {
 function showStatus() {
   for (const key of Object.keys(TARGETS)) {
     say();
-    say(C.b + TARGETS[key].title + C.x);
+    say("  " + c.bold(TARGETS[key].title));
     if (key === "desktop" && process.platform !== "darwin") {
       say("  (macOS only)");
       continue;
@@ -230,58 +222,88 @@ function showStatus() {
 
 // --- menu ---------------------------------------------------------------------
 
+/** Cheap, synchronous "is it there?" for the menu badges — no subprocesses. */
+function desktopInstalled() {
+  const p = process.env.RTLX_PATCHED_APP || path.join(os.homedir(), "Applications", "Claude-RTL.app");
+  try { return fs.existsSync(p); } catch (e) { return false; }
+}
+
+function header() {
+  say();
+  say(
+    ui.box(
+      [
+        c.accent(c.bold("RTL for Claude")) + c.dim("  v" + pkg.version),
+        "Right-to-left text and the Vazirmatn font,",
+        "everywhere Claude runs.",
+      ],
+      c,
+      process.stdout,
+    ),
+  );
+  say();
+}
+
 async function menu() {
-  say();
-  say(C.b + "RTL for Claude" + C.x + C.dim + "  v" + pkg.version + C.x);
-  say("Right-to-left text and the Vazirmatn font, everywhere Claude runs.");
-  say();
-  say("  1) " + TARGETS.desktop.title + C.dim + "   ← the Claude app itself" + C.x);
-  say("  2) " + TARGETS["claude-code"].title);
-  say("  3) " + TARGETS.codex.title);
-  say("  4) VS Code extension" + C.dim + "   ← recommended instead of 2" + C.x);
-  say("  5) Check what is installed");
-  say("  6) Remove something");
-  say("  7) Check prerequisites (changes nothing)");
-  say("  q) Quit");
-  say();
-  const choice = await ask("Choose [1-7, q]: ");
+  header();
+  const installed = desktopInstalled();
+  const choice = await ui.select({
+    title: "What would you like to do?",
+    items: [
+      {
+        label: TARGETS.desktop.title,
+        hint: process.platform !== "darwin" ? "macOS only" : installed ? "installed — reinstall" : "the Claude app itself",
+        value: "desktop",
+      },
+      { label: "VS Code extension", hint: "recommended for the Claude Code chat", value: "vscode-ext" },
+      { label: TARGETS["claude-code"].title, hint: "patch the chat without the extension", value: "claude-code" },
+      { label: TARGETS.codex.title, value: "codex" },
+      { separator: true, label: "" },
+      { label: "Check what is installed", value: "status" },
+      { label: "Remove something", value: "remove" },
+      { label: "Check prerequisites", hint: "changes nothing", value: "doctor" },
+      { label: "Quit", value: "quit" },
+    ],
+    colors: c,
+  });
+
   switch (choice) {
-    case "1": return doAction("desktop", { yes: false, remove: false });
-    case "2": return doAction("claude-code", { yes: false, remove: false });
-    case "3": return doAction("codex", { yes: false, remove: false });
-    case "4": return installVsCodeExtension();
-    case "5": return showStatus();
-    case "6": return removeMenu();
-    case "7": return runDoctor();
-    case "q": case "quit": case "": return 0;
-    default:
-      warn("Didn't catch that.");
-      return menu();
+    case "desktop": case "claude-code": case "codex":
+      return doAction(choice, { yes: false, remove: false });
+    case "vscode-ext": return installVsCodeExtension();
+    case "status": return showStatus();
+    case "remove": return removeMenu();
+    case "doctor": return runDoctor();
+    default: return 0; // Quit, Esc, q or Ctrl-C
   }
 }
 
 async function removeMenu() {
-  say();
-  say("  1) " + TARGETS.desktop.title);
-  say("  2) " + TARGETS["claude-code"].title);
-  say("  3) " + TARGETS.codex.title);
-  say("  q) Back");
-  say();
-  const choice = await ask("Remove which? [1-3, q]: ");
-  const target = { 1: "desktop", 2: "claude-code", 3: "codex" }[choice];
-  if (!target) return 0;
-  return doAction(target, { yes: false, remove: true });
+  const choice = await ui.select({
+    title: "Remove which one?",
+    items: [
+      { label: TARGETS.desktop.title, hint: "deletes ~/Applications/Claude-RTL.app", value: "desktop" },
+      { label: TARGETS["claude-code"].title, hint: "restores the original chat files", value: "claude-code" },
+      { label: TARGETS.codex.title, hint: "restores the original webview", value: "codex" },
+      { separator: true, label: "" },
+      { label: "Back", value: null },
+    ],
+    colors: c,
+  });
+  if (!choice) return 0;
+  return doAction(choice, { yes: false, remove: true });
 }
 
 function runDoctor() {
   say();
-  say(C.b + "Prerequisites" + C.x);
+  say("  " + c.bold("Prerequisites"));
+  rule();
   const r = doctor.report(doctor.allChecks());
   say(r.text);
   say();
   if (r.ok) ok("Everything needed is in place.");
-  else say(C.dim + "Fix the ✗ lines above, then run this again. Nothing was changed." + C.x);
-  say(C.dim + "Include this list if you report a problem: " + pkg.bugs.url + C.x);
+  else say(c.dim("  Fix the ✗ lines above, then run this again. Nothing was changed."));
+  say(c.dim("  Include this list if you report a problem: " + pkg.bugs.url));
   // Exit 2 only when a hard requirement (Node itself) is unmet: the other lines
   // are per-action and are re-checked, with the same fix text, before running.
   return doctor.allChecks().every((c) => c.ok || !c.required) ? 0 : 2;

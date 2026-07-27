@@ -50,6 +50,7 @@ const tarball = path.join(root, packed.filename);
 const MUST_SHIP = [
   "cli/index.js",
   "cli/doctor.js",
+  "cli/ui.js",
   "package.json",
   "README.md",
   "LICENSE",
@@ -153,6 +154,115 @@ ok(guard.checks.findIndex((c) => c.id === "codesign") <
    guard.checks.findIndex((c) => c.id === "claude-app") + 1,
   "codesign is checked no later than the app itself");
 
+// --- 3b. the terminal UI -----------------------------------------------------
+// The menu is hand-written (no inquirer), so the key handling and the fallback
+// need real coverage. Fake TTY streams make that deterministic — no pty, no
+// timing luck.
+console.log("\n[ui]");
+const ui = require("../ui");
+const { PassThrough } = require("stream");
+
+function fakeTty() {
+  const input = new PassThrough();
+  input.isTTY = true;
+  input.setRawMode = () => {};
+  const output = new PassThrough();
+  output.isTTY = true;
+  output.columns = 80;
+  output.chunks = [];
+  output.on("data", (d) => output.chunks.push(String(d)));
+  return { input, output };
+}
+
+const ITEMS = [
+  { label: "First", value: "one" },
+  { label: "Second", hint: "with a hint", value: "two" },
+  { separator: true, label: "" },
+  { label: "Third", value: "three" },
+];
+
+const tick = () => new Promise((r) => setImmediate(r));
+async function drive(keys, items) {
+  const { input, output } = fakeTty();
+  const p = ui.select({ title: "Pick", items: items || ITEMS, input, output, colors: ui.makeColors(output) });
+  await tick();
+  for (const k of keys) {
+    input.write(k);
+    await tick();
+  }
+  const value = await p;
+  return { value, text: ui.stripAnsi(output.chunks.join("")) };
+}
+
+(async () => {
+  let res = await drive(["\r"]);
+  ok(res.value === "one", "enter picks the first item (got " + res.value + ")");
+  ok(/❯ 1\. First/.test(res.text), "the first item is highlighted on open");
+  ok(/2\. Second\s+with a hint/.test(res.text), "hints are rendered next to the label");
+
+  res = await drive(["\x1b[B", "\r"]);
+  ok(res.value === "two", "arrow down moves the selection (got " + res.value + ")");
+
+  res = await drive(["\x1b[B", "\x1b[B", "\r"]);
+  ok(res.value === "three", "a separator is skipped, not selected (got " + res.value + ")");
+
+  res = await drive(["\x1b[A", "\r"]);
+  ok(res.value === "three", "arrow up wraps around to the last item (got " + res.value + ")");
+
+  res = await drive(["3", ]);
+  ok(res.value === "three", "number keys still select directly (got " + res.value + ")");
+
+  res = await drive(["q"]);
+  ok(res.value === null, "q cancels");
+
+  res = await drive(["\x1b"]);
+  ok(res.value === null, "escape cancels");
+
+  res = await drive(["j", "\r"]);
+  ok(res.value === "two", "vim keys work too (j)");
+
+  // Redraw discipline: each keypress must repaint in place, never scroll a new
+  // copy of the menu into the history. (Checked on the RAW output — `drive`
+  // strips the escape codes this assertion is about.)
+  const raw = (await (async () => {
+    const { input, output } = fakeTty();
+    const p = ui.select({ title: "Pick", items: ITEMS, input, output, colors: ui.makeColors(output) });
+    await tick();
+    input.write("\x1b[B"); await tick();
+    input.write("q"); await tick();
+    await p;
+    return output.chunks.join("");
+  })());
+  ok(/\x1b\[\d+A/.test(raw), "a keypress repaints in place (cursor-up), it does not reprint below");
+  ok(raw.indexOf("\x1b[?25l") !== -1 && raw.indexOf("\x1b[?25h") !== -1, "the cursor is hidden while the menu is up and restored after");
+
+  // A pipe (CI, `| cat`, an IDE console) can't do raw mode: the numbered
+  // fallback must still work rather than hanging on a keypress that never comes.
+  const input = new PassThrough();
+  const output = new PassThrough();
+  output.columns = 80;
+  let text = "";
+  output.on("data", (d) => (text += String(d)));
+  const pending = ui.select({ title: "Pick", items: ITEMS, input, output, colors: ui.makeColors(output) });
+  await tick();
+  input.write("2\n");
+  ok((await pending) === "two", "without raw mode it falls back to a numbered prompt");
+  ok(/1\) First/.test(text), "…and prints the numbers");
+
+  // Colour discipline.
+  const noColor = ui.makeColors({ isTTY: true });
+  const savedNo = process.env.NO_COLOR;
+  process.env.NO_COLOR = "1";
+  ok(ui.makeColors({ isTTY: true }).level === 0, "NO_COLOR turns colour off");
+  if (savedNo === undefined) delete process.env.NO_COLOR; else process.env.NO_COLOR = savedNo;
+  ok(ui.makeColors({ isTTY: false }).level === 0, "a pipe gets no escape codes");
+  ok(ui.stripAnsi(ui.box(["hello"], ui.makeColors({ isTTY: false }), { columns: 80 })).indexOf("hello") !== -1,
+    "the header box degrades to plain text");
+
+  runRest();
+})();
+
+function runRest() {
 // --- 4. a real install, against the synthetic fixture -------------------------
 // macOS only: the patcher uses PlistBuddy and codesign, so there is nothing to
 // exercise on a Linux CI runner. Everything above this line is portable and
@@ -210,3 +320,4 @@ if (failed) {
   process.exit(1);
 }
 console.log("\nPASS: " + total + " CLI cases (packed tarball + synthetic fixture)");
+} // runRest

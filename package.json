@@ -39,8 +39,8 @@
     "test": "node cli/tests/cli.test.js"
   },
   "files": [
-    "cli/index.js",
-    "cli/doctor.js",
+    "cli/",
+    "!cli/tests/",
     "desktop-app/apply-rtl.sh",
     "desktop-app/assets/",
     "vscode-extension/apply-rtl.sh",

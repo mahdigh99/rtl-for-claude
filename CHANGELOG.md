@@ -8,9 +8,11 @@ This project follows [Semantic Versioning](https://semver.org).
 ### Added
 
 - **Install with one command: `npx rtl-for-claude`.** No download, no unzip, no
-  `cd` — a menu asks what you want (the Claude Desktop app, the Claude Code
-  chat, the Codex chat, or the VS Code extension), tells you exactly what it
-  will change, and asks before doing it. `--doctor` checks the prerequisites and
+  `cd` — an arrow-key menu asks what you want (the Claude Desktop app, the
+  Claude Code chat, the Codex chat, or the VS Code extension), tells you exactly
+  what it will change, and asks before doing it. It degrades gracefully: a
+  terminal that can't do arrow keys gets a numbered prompt, and a pipe or a
+  `NO_COLOR` terminal gets clean plain text. `--doctor` checks the prerequisites and
   names the fix for each missing one — including the Xcode Command Line Tools,
   which it now checks *before* copying a 500 MB app bundle instead of failing
   half-way. Everything is still installable by hand from a checkout: the
