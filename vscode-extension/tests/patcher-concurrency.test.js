@@ -1,9 +1,9 @@
-/* Regression test for concurrent-write corruption (backlog item 1.1).
+/* Regression test for concurrent-write corruption.
  *
  * Every open IDE window runs its own extension host, and they all patch the
  * SAME webview/index.css|js on disk. Without serialization their read-modify-
  * write cycles interleave and truncate the shared files (observed in the wild
- * in a competing extension: index.js shrinking 4.8 MB → ~1 MB → blank panel).
+ * in the wild: index.js shrinking 4.8 MB → ~1 MB → a blank panel).
  *
  * patcher.js has zero vscode imports, so this test exercises the REAL patch
  * code with no editor and no mock: N simultaneous patchers on one fixture

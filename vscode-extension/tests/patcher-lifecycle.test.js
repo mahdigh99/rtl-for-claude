@@ -1,4 +1,4 @@
-/* Editor-free lifecycle test for the extension patcher (backlog item 2.3).
+/* Editor-free lifecycle test for the extension patcher.
  *
  * A Module._load hook hands extension.js our hand-rolled `vscode` mock, fake
  * Claude Code installs live in a temp HOME, and every assertion is on the real

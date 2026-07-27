@@ -1,4 +1,4 @@
-# CI — the exact suite release.sh runs before shipping, on every push and PR.
+# CI — the full test suite, on every push and pull request.
 #
 # The headless-Chrome suites find the browser at /usr/bin/google-chrome, which
 # GitHub's ubuntu runners preinstall; if it ever disappears they skip cleanly
@@ -36,7 +36,7 @@ jobs:
         run: node --test browser-extension/tests/*.test.js
 
       - name: Browser DOM suites (headless Chrome)
-        # Same loop as release.sh: every browser test except detect.test.js
+        # Every browser test except detect.test.js
         # (already covered by node --test above) runs as its own script so its
         # PASS/FAIL/SKIP summary lands in the log.
         run: |

@@ -1,4 +1,4 @@
-/* DOM-level test for the "use a font installed on my computer" mode (backlog 3.1).
+/* DOM-level test for the "use a font installed on my computer" mode.
  *
  * Covers both halves of the mechanism and the rules that keep it safe:
  *   1. a scoped @font-face family declared from local() ONLY, per weight, with

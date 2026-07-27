@@ -1,11 +1,10 @@
-/* Cross-surface consistency guard (backlog 3.4 + 3.5).
+/* Cross-surface consistency guard.
  *
  * This project ships the same engine four times — browser extension, Claude Code
  * driver, Codex driver, Claude Desktop driver — plus a settings UI per surface.
- * The audit that produced backlog item 3.5 found the detection threshold had
- * quietly drifted (browser 0.1, VS Code 0.3, popup label hardcoded "30%"): each
- * copy was defensible on its own, and nothing failed. This test is the thing
- * that fails.
+ * They had quietly drifted apart: the detection threshold was 0.1 in the
+ * browser, 0.3 in VS Code, and the popup's label hardcoded "30%". Each copy was
+ * defensible on its own and nothing failed. This test is the thing that fails.
  *
  * Pure static analysis — no browser, no DOM, runs in milliseconds.
  * Run: node tests/consistency.test.js
@@ -86,7 +85,7 @@ for (const f of ["vscode-extension/assets/styles.css", "vscode-extension-codex/a
     f + " consumes --rtlx-letter-spacing (with a fallback, so a CSS-only patch stays valid)");
 }
 
-// --- keyboard shortcuts (3.4) ---------------------------------------------
+// --- keyboard shortcuts -----------------------------------------------------
 const manifest = json("browser-extension/manifest.json");
 ok(!!(manifest.commands && manifest.commands["cycle-direction"] && manifest.commands["toggle-enabled"]),
   "manifest declares both commands");
@@ -123,7 +122,7 @@ for (const kb of pkg.contributes.keybindings || []) {
   ok(!!kb.key && !!kb.mac, kb.command + " keybinding covers both platforms");
 }
 
-// --- localized settings (3.5) ---------------------------------------------
+// --- localized settings -----------------------------------------------------
 const nlsEn = json("vscode-extension/package.nls.json");
 const pkgSrc = read("vscode-extension/package.json");
 const used = new Set((pkgSrc.match(/"%([^%"]+)%"/g) || []).map((s) => s.slice(2, -2)));

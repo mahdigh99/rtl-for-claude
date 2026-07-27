@@ -1,4 +1,4 @@
-/* Persistence test for the global Auto/RTL/LTR pin (backlog item 1.6).
+/* Persistence test for the global Auto/RTL/LTR pin.
  *
  * The pin used to live only in memory (`var globalForce`) and reset to Auto on
  * every webview reload. Both drivers now persist it in the webview's

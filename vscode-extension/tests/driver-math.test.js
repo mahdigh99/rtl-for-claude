@@ -1,5 +1,5 @@
 /* Math isolation + table direction + native-dir coexistence in the VS Code
- * drivers (Phase 2 mirror of the browser engine, backlog items 1.3/1.4/3.2).
+ * drivers — the same behaviour the browser engine has.
  *
  * Drives the REAL rtl-math.js + driver.js + styles.css of each package in
  * headless Chrome and asserts:

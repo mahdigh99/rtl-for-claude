@@ -1,4 +1,4 @@
-/* Functional test for the keyboard-shortcut background script (backlog 3.4).
+/* Functional test for the keyboard-shortcut background script.
  *
  * background.js exists for one reason — chrome.commands can be delivered
  * nowhere else — and it is invisible in normal use: if it silently stops
