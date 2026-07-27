@@ -36,7 +36,8 @@
   var SKIP_CLOSEST = "pre, code, kbd, samp, .katex, .katex-display, mjx-container";
 
   var MARK = "data-rtlx-md"; // stamps we own — only these are ever rewritten
-  var THRESHOLD = 0.3;       // same default as the chat engine's ratio mode
+  var THRESHOLD = 0.1;       // same default as the chat engine's ratio mode
+                             // (rtl-engine.js DEFAULT_THRESHOLD — keep in sync)
 
   function count(re, s) {
     var m = s.match(re);

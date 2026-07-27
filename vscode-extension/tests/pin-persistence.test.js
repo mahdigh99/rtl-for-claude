@@ -74,6 +74,26 @@ setTimeout(() => {
   out.push((!de.hasAttribute("data-rtlx-force-all") ? "ok   " : "FAIL ") + "Auto removes the <html> attribute");
   btn.click(); // auto -> rtl
   out.push((get() === "rtl" ? "ok   " : "FAIL ") + "click writes rtl to localStorage (got " + get() + ")");
+
+  // --- keyboard shortcut (Ctrl/Cmd+Shift+9) --------------------------------
+  // The pin lives inside this sandboxed webview, so a VS Code keybinding can
+  // never reach it — the driver owns the key. Keyed on e.code so a Persian
+  // layout (where the 9 key types another character) still works.
+  const key = (over) => document.dispatchEvent(new KeyboardEvent("keydown", Object.assign(
+    { ctrlKey: true, shiftKey: true, code: "Digit9", bubbles: true, cancelable: true }, over || {})));
+  key(); // rtl -> ltr
+  out.push((get() === "ltr" ? "ok   " : "FAIL ") + "shortcut cycles rtl→ltr and persists (got " + get() + ")");
+  out.push((de.getAttribute("data-rtlx-force-all") === "ltr" ? "ok   " : "FAIL ") + "shortcut applies ltr to <html>");
+  out.push((btn.dataset.state === "ltr" ? "ok   " : "FAIL ") + "shortcut repaints the button (state=" + btn.dataset.state + ")");
+  key({ shiftKey: false });        // not our chord
+  key({ code: "Digit8" });          // not our key
+  key({ ctrlKey: false, metaKey: false }); // no Ctrl/Cmd
+  key({ altKey: true });            // Alt is a different chord entirely
+  out.push((get() === "ltr" ? "ok   " : "FAIL ") + "near-miss chords are ignored (got " + get() + ")");
+  key(); // ltr -> auto
+  out.push((get() === null && !de.hasAttribute("data-rtlx-force-all") ? "ok   " : "FAIL ") +
+    "shortcut cycles ltr→auto and clears the pin (got " + get() + ")");
+
   document.getElementById("result").textContent = out.join("\\n");
 }, 400);
 </script>`;

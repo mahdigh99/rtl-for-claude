@@ -22,6 +22,11 @@
       fontStack: '"Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif',
       fontScale: 1,
       lineHeight: 1.85,
+      letterSpacing: 0,
+      // Detection defaults, matching the browser engine's exactly (rtl-engine.js
+      // DEFAULT_THRESHOLD) and the Claude Code driver's.
+      mode: "ratio", // ratio | first-strong
+      threshold: 0.1,
       applyToInput: true,
       keepCodeLTR: true,
     },
@@ -84,14 +89,23 @@
     }
   }
 
+  var FIRST_STRONG_RE = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFFA-Za-z\u00C0-\u024F\u1E00-\u1EFF]/;
+
   // fallow-ignore-next-line complexity -- compact Unicode ratio calculation
   function dirByRatio(text, thr) {
     if (!text) return null;
     var s = text.length > 600 ? text.slice(0, 600) : text;
+    // "First letter" mode mirrors the browser's native dir="auto": the first
+    // strong character decides, regardless of what follows.
+    if (S.mode === "first-strong") {
+      var m = s.match(FIRST_STRONG_RE);
+      if (!m) return null;
+      return RTL_RE.test(m[0]) ? "rtl" : "ltr";
+    }
     var r = (s.match(RTL_G) || []).length;
     var l = (s.match(LTR_G) || []).length;
     if (!(r + l)) return null;
-    return r / (r + l) >= (thr || 0.1) ? "rtl" : "ltr";
+    return r / (r + l) >= (typeof thr === "number" ? thr : S.threshold) ? "rtl" : "ltr";
   }
 
   // Forcing LTR must also drop the auto-detected RTL marks, otherwise the
@@ -117,6 +131,7 @@
     de.style.setProperty("--rtlx-font-stack", S.fontStack);
     de.style.setProperty("--rtlx-font-scale", String(S.fontScale));
     de.style.setProperty("--rtlx-line-height", String(S.lineHeight));
+    de.style.setProperty("--rtlx-letter-spacing", Number(S.letterSpacing || 0) + "em");
     de.classList.toggle("rtlx-code-ltr", !!S.keepCodeLTR);
   }
 
@@ -356,26 +371,42 @@
     gEl.textContent = globalForce === "rtl" ? "⇥ RTL" : globalForce === "ltr" ? "⇤ LTR" : "⇌ Auto";
     gEl.dataset.state = globalForce;
   }
+  function cycleGlobalForce() {
+    globalForce = globalForce === "auto" ? "rtl" : globalForce === "rtl" ? "ltr" : "auto";
+    var de = document.documentElement;
+    if (globalForce === "auto") de.removeAttribute(FORCE_ALL);
+    else de.setAttribute(FORCE_ALL, globalForce);
+    saveForce(globalForce); // survive webview reloads
+    gLabel();
+    sweep();
+  }
   function ensureGlobalToggle() {
     if (!document.body) return;
     if (gEl && document.body.contains(gEl)) return;
     gEl = document.createElement("button");
     gEl.id = "rtlx-global";
     gEl.type = "button";
-    gEl.title = "Flip the whole chat: Auto → RTL → LTR";
+    gEl.title = "Flip the whole chat: Auto → RTL → LTR (Ctrl/Cmd+Shift+9)";
     gEl.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      globalForce = globalForce === "auto" ? "rtl" : globalForce === "rtl" ? "ltr" : "auto";
-      var de = document.documentElement;
-      if (globalForce === "auto") de.removeAttribute(FORCE_ALL);
-      else de.setAttribute(FORCE_ALL, globalForce);
-      saveForce(globalForce); // survive webview reloads
-      gLabel();
-      sweep();
+      cycleGlobalForce(); // same path as the keyboard shortcut
     });
     gLabel();
     document.body.appendChild(gEl);
+  }
+
+  // ---- keyboard shortcut ----------------------------------------------------
+  // Ctrl/Cmd+Shift+9 cycles Auto → RTL → LTR. The pin lives inside the sandboxed
+  // webview, so a VS Code keybinding could never reach it — the driver has to
+  // own the shortcut. Keyed on e.code (physical key) so a Persian keyboard
+  // layout, where `9` types another character, still triggers it.
+  function onKeydown(e) {
+    if (!e || !(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return;
+    if (e.code !== "Digit9") return;
+    e.preventDefault();
+    e.stopPropagation();
+    cycleGlobalForce();
   }
 
   // ---- sweep + observer -----------------------------------------------------
@@ -406,15 +437,19 @@
 
   applyVars();
   sweep();
+  document.addEventListener("keydown", onKeydown, true);
 
+  // The observer is the ONLY steady-state trigger: it fires on every DOM change
+  // Codex makes, so a 2 s poll on top of it was pure duplicate work (a full
+  // querySelectorAll sweep of the whole document, forever, in every open
+  // webview). The interval survives only as the fallback for the one case the
+  // observer can't cover — it failed to attach at all.
   try {
     new MutationObserver(function () {
       schedule();
     }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   } catch (error) {
     reportError(error);
+    setInterval(sweep, 2000);
   }
-
-  // Re-check periodically in case very slow mutations slip through.
-  setInterval(sweep, 2000);
 })();

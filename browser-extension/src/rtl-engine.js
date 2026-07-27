@@ -28,6 +28,12 @@
   // "this paragraph is really English/European".
   const LTR_CHARS = "A-Za-zÀ-ɏͰ-ϿЀ-ӿḀ-ỿ";
 
+  // THE detection default, shared by every surface of the project (content.js,
+  // the popup, both VS Code drivers, the VS Code setting default and the
+  // Markdown-preview script). Keep them equal — a divergence here is invisible
+  // in review and very visible to a user who changes surfaces.
+  const DEFAULT_THRESHOLD = 0.1;
+
   const RTL_RE = new RegExp("[" + RTL_CHARS + "]", "g");
   const LTR_RE = new RegExp("[" + LTR_CHARS + "]", "g");
   const HAS_RTL_RE = new RegExp("[" + RTL_CHARS + "]");
@@ -46,8 +52,11 @@
    * @param {object} opts
    *   - mode: "ratio" (default) | "first-strong"
    *   - threshold: 0..1 — for ratio mode, min share of strong chars that must
-   *     be RTL to call the block RTL. Default 0.3 (RTL "wins ties" because an
-   *     RTL paragraph routinely contains English technical terms).
+   *     be RTL to call the block RTL. Default DEFAULT_THRESHOLD (0.1): RTL
+   *     "wins ties" by a wide margin because an RTL paragraph routinely
+   *     contains English technical terms, and a low bar is what keeps a
+   *     streaming answer from flipping back and forth (the share crosses 0.1
+   *     within the first few words and never drops below it again).
    * @returns {"rtl"|"ltr"|null}  null = no strong chars, leave the page alone.
    */
   function detectDirection(text, opts, currentDir) {
@@ -66,7 +75,7 @@
     const ltr = countMatches(LTR_RE, text);
     const strong = rtl + ltr;
     if (strong === 0) return null;
-    const threshold = typeof opts.threshold === "number" ? opts.threshold : 0.3;
+    const threshold = typeof opts.threshold === "number" ? opts.threshold : DEFAULT_THRESHOLD;
     const ratio = rtl / strong;
     // Hysteresis (deadband). While an answer STREAMS in, this same block is
     // re-classified on every token; the RTL share crosses `threshold` back and
@@ -464,6 +473,130 @@
     }
   }
 
+  // --- locally-installed font mode ------------------------------------------
+  //
+  // Optional alternative to the bundled woff2: route RTL glyphs to a font the
+  // user already has installed. Two mechanisms, both no-ops when the font is
+  // absent (so the bundled Vazirmatn stays the fallback, never a regression):
+  //
+  //   1. A scoped @font-face family built from `local()` only — no network, no
+  //      CSP font-src concern — optionally limited with `unicode-range` so the
+  //      face claims ONLY RTL codepoints and Latin keeps falling through to the
+  //      page's own font. content.js prepends this family to --rtlx-font-stack.
+  //   2. A shadow stylesheet that re-declares every same-origin font-family
+  //      rule verbatim with the scoped family PREPENDED, appended last so
+  //      source order settles the tie. This is what reaches text our own rules
+  //      deliberately don't touch (sidebar, chrome, buttons). CSS variables are
+  //      never rewritten — overriding a site's font variables is fragile and
+  //      leaks into places (icons, code) it must not.
+  //
+  // Mono / icon / KaTeX / emoji / math stacks are skipped in (2): those map
+  // codepoints privately or must stay monospace even for Arabic glyphs in code.
+  const LOCAL_FONT_FAMILY = "Vazirmatn RTLX Local";
+  const LOCAL_STYLE_ID = "rtlx-local-font";
+  // Mirrors RTL_CHARS above (plus the Arabic-Indic digit blocks, which live
+  // inside 0600–06FF and SHOULD come from the Persian face).
+  const LOCAL_RTL_RANGE = "U+0590-08FF,U+FB1D-FDFF,U+FE70-FEFF";
+  const LOCAL_SKIP_STACK_RE = /mono|icon|katex|emoji|math|symbol/i;
+  const LOCAL_RULE_BUDGET = 400;
+
+  // A family name lands inside a CSS string literal; strip everything that
+  // could end it (or the declaration/rule) before it ever reaches the sheet.
+  function sanitizeFamily(name) {
+    return String(name || "")
+      .replace(/["'\\;{}()<>,]/g, "")
+      .trim()
+      .slice(0, 64);
+  }
+
+  function localFontFaces(name, scope) {
+    // "all" (or anything unknown) → no unicode-range: the face covers every
+    // glyph the font actually supplies and the rest falls through as usual.
+    const range = scope === "all" ? "" : LOCAL_RTL_RANGE;
+    // Weight-specific faces via full + PostScript names (the static-file naming
+    // convention Vazirmatn and most Persian families follow). A name the system
+    // doesn't know simply makes that local() fail, and the browser synthesizes
+    // from the closest weight that did load.
+    return [["", "Regular", "400"], [" Medium", "Medium", "500"],
+            [" SemiBold", "SemiBold", "600"], [" Bold", "Bold", "700"]]
+      .map((w) =>
+        '@font-face{font-family:"' + LOCAL_FONT_FAMILY + '";src:local("' + name + w[0] +
+        '"),local("' + name + "-" + w[1] + '");font-weight:' + w[2] + ";font-style:normal" +
+        (range ? ";unicode-range:" + range : "") + "}")
+      .join("");
+  }
+
+  // Walk a stylesheet's rules and re-emit each font-family declaration with our
+  // scoped family in front. `prefix`/`suffix` carry any @media/@supports the
+  // rule was nested in, so the re-declaration stays conditional exactly like the
+  // original.
+  function scanRules(rules, prefix, suffix, out) {
+    for (let i = 0; i < rules.length; i++) {
+      const r = rules[i];
+      if (out.length >= LOCAL_RULE_BUDGET) return;
+      if (r.type === 1 && r.selectorText && r.style) {
+        const ff = r.style.getPropertyValue("font-family");
+        if (!ff || ff.indexOf(LOCAL_FONT_FAMILY) !== -1) continue;
+        if (LOCAL_SKIP_STACK_RE.test(ff)) continue;
+        const bang = r.style.getPropertyPriority("font-family") ? " !important" : "";
+        out.push(prefix + r.selectorText + '{font-family:"' + LOCAL_FONT_FAMILY + '",' + ff + bang + "}" + suffix);
+      } else if (r.cssRules && r.cssRules.length && typeof r.conditionText === "string") {
+        const at = (r.type === 12 ? "@supports " : "@media ") + r.conditionText;
+        scanRules(r.cssRules, prefix + at + "{", "}" + suffix, out);
+      }
+    }
+  }
+
+  /**
+   * Install (or refresh, or remove) the locally-installed-font mode.
+   * Idempotent and cheap to re-run: it rebuilds the text and only touches the
+   * DOM when the result changed or the sheet lost its last-in-<head> position.
+   * Call it again after the page streams in more CSS chunks (SPA route splits).
+   */
+  function applyLocalFont(settings, doc) {
+    doc = doc || (typeof document !== "undefined" ? document : null);
+    if (!doc || !doc.head) return;
+    const name = sanitizeFamily(settings && settings.localFont);
+    const existing = doc.getElementById(LOCAL_STYLE_ID);
+    if (!name) {
+      if (existing) existing.remove();
+      return;
+    }
+    const css = [localFontFaces(name, settings.localFontScope)];
+
+    // Baseline for text that gets its stack purely by inheritance from <body>.
+    // Strip our own family before re-reading, or re-runs would stack it up.
+    let base = "";
+    try {
+      base = (doc.defaultView && doc.body && doc.defaultView.getComputedStyle(doc.body).fontFamily) || "";
+    } catch (e) {}
+    base = base.replace(new RegExp('^\\s*["\']?' + LOCAL_FONT_FAMILY + '["\']?\\s*,\\s*'), "");
+    if (base && !LOCAL_SKIP_STACK_RE.test(base))
+      css.push('body{font-family:"' + LOCAL_FONT_FAMILY + '",' + base + "}");
+
+    const rules = [];
+    for (let i = 0; i < doc.styleSheets.length; i++) {
+      const sheet = doc.styleSheets[i];
+      if (sheet.ownerNode && sheet.ownerNode.id === LOCAL_STYLE_ID) continue;
+      let cssRules = null;
+      try { cssRules = sheet.cssRules; } catch (e) { continue; } // cross-origin
+      if (cssRules) scanRules(cssRules, "", "", rules);
+    }
+    const text = css.concat(rules).join("");
+
+    let el = existing;
+    if (!el) {
+      el = doc.createElement("style");
+      el.id = LOCAL_STYLE_ID;
+    }
+    // (Re-)append so the shadow sheet stays behind late-loaded chunk CSS —
+    // source order is what makes the prepended family win.
+    if (el.textContent !== text || el.nextSibling || !el.isConnected) {
+      el.textContent = text;
+      doc.head.appendChild(el);
+    }
+  }
+
   /**
    * Classify a compose box (textarea or contenteditable) live as typed.
    * We use dir="auto" rather than an explicit direction: on a contenteditable
@@ -516,6 +649,8 @@
       el.removeAttribute(CELL_ATTR);
     });
     if (doc.documentElement) doc.documentElement.removeAttribute(FORCE_ALL_ATTR);
+    const localSheet = doc.getElementById && doc.getElementById(LOCAL_STYLE_ID);
+    if (localSheet) localSheet.remove();
   }
 
   global.RTLX = {
@@ -525,8 +660,12 @@
     processSubtree,
     isolateMath,
     processTables,
+    applyLocalFont,
     applyToInput,
     teardown,
+    DEFAULT_THRESHOLD,
+    LOCAL_FONT_FAMILY,
+    LOCAL_STYLE_ID,
     BLOCK_TAGS,
     SKIP_TAGS,
     FORCE_ATTR,

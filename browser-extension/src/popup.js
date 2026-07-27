@@ -14,6 +14,8 @@
     threshold: 0.1,
     fontEnabled: true,
     fontFamily: '"Vazirmatn RTLX", "Vazirmatn", Tahoma, sans-serif',
+    localFont: "",
+    localFontScope: "rtl",
     fontScale: 1,
     lineHeight: 1.85,
     letterSpacing: 0,
@@ -55,6 +57,11 @@
       font: "فونت",
       fontTahoma: "Tahoma (سیستم)",
       fontSite: "فونتِ خودِ سایت",
+      localFont: "فونتِ نصب‌شده روی کامپیوترم",
+      localFontPh: "مثلاً Vazirmatn",
+      localFontHint: "خالی بگذارید تا از فونتِ همراهِ افزونه استفاده شود. اگر فونت نصب نباشد، خودکار به همان برمی‌گردد.",
+      scopeRtl: "فقط حروفِ راست‌چین",
+      scopeAll: "همهٔ متن‌ها",
       textSize: "اندازهٔ متن",
       lineSpacing: "فاصلهٔ خط‌ها",
       applyToInput: "اعمال روی کادرِ پیام",
@@ -88,6 +95,11 @@
       font: "الخط",
       fontTahoma: "Tahoma (النظام)",
       fontSite: "خط الموقع نفسه",
+      localFont: "خط مثبَّت على جهازي",
+      localFontPh: "مثال: Vazirmatn",
+      localFontHint: "اتركه فارغًا لاستخدام الخط المرفق. وإن لم يكن الخط مثبّتًا، يُستخدم المرفق تلقائيًا.",
+      scopeRtl: "الحروف اليمينية فقط",
+      scopeAll: "كل النصوص",
       textSize: "حجم النص",
       lineSpacing: "تباعد الأسطر",
       applyToInput: "تطبيق على صندوق الكتابة",
@@ -121,6 +133,11 @@
       font: "فونٹ",
       fontTahoma: "Tahoma (سسٹم)",
       fontSite: "سائٹ کا اپنا فونٹ",
+      localFont: "میرے کمپیوٹر پر نصب فونٹ",
+      localFontPh: "مثلاً Vazirmatn",
+      localFontHint: "خالی چھوڑیں تو شامل فونٹ استعمال ہوگا۔ اگر فونٹ نصب نہ ہو تو خودکار طور پر وہی استعمال ہوتا ہے۔",
+      scopeRtl: "صرف RTL حروف",
+      scopeAll: "تمام متن",
       textSize: "متن کا سائز",
       lineSpacing: "سطروں کا فاصلہ",
       applyToInput: "پیغام کے خانے پر لاگو کریں",
@@ -377,6 +394,9 @@
 
     $("fontEnabled").checked = settings.fontEnabled;
     $("fontFamily").value = settings.fontFamily;
+    // Don't clobber the field while the user is typing in it (save is debounced).
+    if (document.activeElement !== $("localFont")) $("localFont").value = settings.localFont || "";
+    $("localFontScope").value = settings.localFontScope || "rtl";
     $("fontScale").value = settings.fontScale;
     $("scaleVal").textContent = faNum(Math.round(settings.fontScale * 100)) + "%";
     $("lineHeight").value = settings.lineHeight;
@@ -417,6 +437,20 @@
 
     $("fontEnabled").addEventListener("change", (e) => save({ fontEnabled: e.target.checked }));
     $("fontFamily").addEventListener("change", (e) => save({ fontFamily: e.target.value }));
+
+    // Free text: persist when the user pauses, not on every keystroke (each
+    // save re-renders the popup and wakes every content script).
+    let localFontTimer;
+    $("localFont").addEventListener("input", (e) => {
+      clearTimeout(localFontTimer);
+      const v = e.target.value;
+      localFontTimer = setTimeout(() => save({ localFont: v.trim() }), 400);
+    });
+    $("localFont").addEventListener("change", (e) => {
+      clearTimeout(localFontTimer);
+      save({ localFont: e.target.value.trim() });
+    });
+    $("localFontScope").addEventListener("change", (e) => save({ localFontScope: e.target.value }));
 
     $("fontScale").addEventListener("input", (e) => {
       $("scaleVal").textContent = faNum(Math.round(e.target.value * 100)) + "%";

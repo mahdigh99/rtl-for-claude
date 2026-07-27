@@ -21,6 +21,12 @@
     // RTL early & stays stable while streaming; Persian answers cross it fast)
     fontEnabled: true,
     fontFamily: '"Vazirmatn RTLX", "Vazirmatn", "Sahel", Tahoma, sans-serif',
+    // Optional "use a font installed on my computer" mode: the family name to
+    // look up with local() ("" = off, use the bundled woff2), and how much of
+    // the page it may claim ("rtl" = RTL codepoints only, "all" = everything
+    // the font supplies). The bundled font always stays as the fallback.
+    localFont: "",
+    localFontScope: "rtl",
     fontScale: 1,
     lineHeight: 1.85,
     letterSpacing: 0,
@@ -67,10 +73,46 @@
 
   function applyCssVars() {
     const root = document.documentElement;
-    root.style.setProperty("--rtlx-font-stack", settings.fontFamily);
+    root.style.setProperty("--rtlx-font-stack", fontStack());
     root.style.setProperty("--rtlx-font-scale", String(settings.fontScale));
     root.style.setProperty("--rtlx-line-height", String(settings.lineHeight));
     root.style.setProperty("--rtlx-letter-spacing", settings.letterSpacing + "em");
+  }
+
+  // The locally-installed font (when set) goes IN FRONT of the chosen stack: the
+  // engine declares it from local() only, so an absent font makes the face fail
+  // to load and the bundled Vazirmatn behind it takes over — no flash, no gap.
+  // Exception: "inherit" is a keyword, not a family, and cannot share a list;
+  // there the shadow-stylesheet half of local-font mode does the work instead.
+  function fontStack() {
+    const chosen = settings.fontFamily;
+    if (!settings.localFont || chosen === "inherit") return chosen;
+    return '"' + RTLX.LOCAL_FONT_FAMILY + '", ' + chosen;
+  }
+
+  // The page's own CSS arrives in chunks (SPA route splits), and local-font mode
+  // re-declares those rules — so re-run it a few times on a tapering, self-
+  // terminating schedule instead of observing <head> forever. Idempotent: a
+  // re-run with nothing new to say touches no DOM.
+  const LOCAL_FONT_RESCANS = [800, 2500, 6000];
+  let localFontTimers = [];
+  function refreshLocalFont() {
+    try {
+      RTLX.applyLocalFont(settings);
+    } catch (e) {}
+  }
+  function scheduleLocalFontRescans() {
+    clearLocalFontRescans();
+    if (!settings.localFont) return;
+    localFontTimers = LOCAL_FONT_RESCANS.map((ms) =>
+      setTimeout(() => {
+        if (active) refreshLocalFont();
+      }, ms)
+    );
+  }
+  function clearLocalFontRescans() {
+    localFontTimers.forEach(clearTimeout);
+    localFontTimers = [];
   }
 
   // --- scheduling: throttle streaming mutations (apply ~5x/sec max) --------
@@ -284,6 +326,8 @@
 
   function fullSweep() {
     schedule(document.body);
+    // A route change can pull in its own CSS chunk — re-declare against it.
+    if (settings.localFont) refreshLocalFont();
   }
 
   function hookHistory() {
@@ -315,6 +359,8 @@
     // which is always chrome-safe.
     settings.contentSelector = messageSelector();
     applyCssVars();
+    refreshLocalFont();
+    scheduleLocalFontRescans();
     applyForceMarker();
     hookHistory();
 
@@ -387,6 +433,7 @@
       timerId = 0;
     }
     pending.clear();
+    clearLocalFontRescans();
     document.removeEventListener("input", onInput, true);
     document.removeEventListener("focusin", onFocusIn, true);
     removeGlobalToggle();
@@ -430,6 +477,13 @@
       if (msg.type === "rtlx:toggle") {
         settings.enabled = !settings.enabled;
         api.storage.sync.set({ enabled: settings.enabled });
+      }
+      // Keyboard shortcut (background.js → here): cycle the whole-chat pin
+      // exactly as the floating button does, and repaint it if it's on screen.
+      if (msg.type === "rtlx:cycle" && active) {
+        cycleGlobal();
+        const btn = document.getElementById(GLOBAL_ID);
+        if (btn) paintGlobalToggle(btn);
       }
     });
   }

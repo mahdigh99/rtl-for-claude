@@ -77,8 +77,11 @@ function rawSettings() {
     "font.custom": c.get("font.custom", ""),
     "font.scale": c.get("font.scale", 1),
     "font.lineHeight": c.get("font.lineHeight", 1.85),
+    "font.letterSpacing": c.get("font.letterSpacing", 0),
     "detection.mode": c.get("detection.mode", "ratio"),
-    "detection.threshold": c.get("detection.threshold", 0.3),
+    // 0.1 is THE project-wide detection default (browser engine, popup, both
+    // drivers, the Markdown preview). Keep this literal in sync with them.
+    "detection.threshold": c.get("detection.threshold", 0.1),
     applyToInput: c.get("applyToInput", true),
     showMessageToggles: c.get("showMessageToggles", true),
     keepCodeLeftToRight: c.get("keepCodeLeftToRight", true),
@@ -106,6 +109,7 @@ function engineSettings() {
     fontStack: fontStackFor(r),
     fontScale: r["font.scale"],
     lineHeight: r["font.lineHeight"],
+    letterSpacing: r["font.letterSpacing"],
     mode: r["detection.mode"],
     threshold: r["detection.threshold"],
     applyToInput: r.applyToInput,
@@ -126,6 +130,7 @@ function buildJs(context, s) {
     fontStack: s.fontStack,
     fontScale: s.fontScale,
     lineHeight: s.lineHeight,
+    letterSpacing: s.letterSpacing,
     applyToInput: s.applyToInput,
     showToggles: s.showToggles,
     keepCodeLTR: s.keepCodeLTR,

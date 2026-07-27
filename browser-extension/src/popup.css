@@ -73,6 +73,9 @@ input[type="text"] {
   font-family: inherit; font-size: 12px; min-width: 0; max-width: 100%;
 }
 input[type="text"].wide { width: 100%; margin-top: 6px; }
+/* Local-font scope sits under its text field, not beside it (the popup is
+   narrow and the field already takes the full width). */
+#localFontScope { margin-top: 6px; }
 
 /* segmented control */
 .seg { display: flex; gap: 6px; }

@@ -14,6 +14,26 @@
   },
   "permissions": ["storage", "scripting"],
   "optional_host_permissions": ["https://*/*"],
+  "background": {
+    "service_worker": "src/background.js",
+    "scripts": ["src/background.js"]
+  },
+  "commands": {
+    "cycle-direction": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+9",
+        "mac": "Command+Shift+9"
+      },
+      "description": "Cycle the whole chat: Auto → RTL → LTR"
+    },
+    "toggle-enabled": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+8",
+        "mac": "Command+Shift+8"
+      },
+      "description": "Turn RTL for Claude on or off"
+    }
+  },
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "RTL for Claude",

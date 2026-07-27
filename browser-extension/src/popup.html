@@ -46,7 +46,7 @@
     </section>
 
     <section class="block" id="thresholdWrap">
-      <label class="lbl"><span data-i18n="sensitivity">RTL sensitivity</span>: <b id="thresholdVal">30%</b></label>
+      <label class="lbl"><span data-i18n="sensitivity">RTL sensitivity</span>: <b id="thresholdVal">10%</b></label>
       <input type="range" id="threshold" min="0.1" max="0.7" step="0.05" />
       <p class="hint" data-i18n="sensitivityHint">Lower = flips to RTL more easily.</p>
     </section>
@@ -69,6 +69,17 @@
         <option value='Tahoma, "Vazirmatn RTLX", sans-serif' data-i18n="fontTahoma">Tahoma (system)</option>
         <option value='inherit' data-i18n="fontSite">Site's own font</option>
       </select>
+    </section>
+
+    <section class="block">
+      <label class="lbl" data-i18n="localFont">Font installed on my computer</label>
+      <input type="text" id="localFont" dir="ltr" spellcheck="false" class="wide"
+             data-i18n-ph="localFontPh" placeholder="e.g. Vazirmatn" />
+      <select id="localFontScope" class="fit">
+        <option value="rtl" data-i18n="scopeRtl">RTL letters only</option>
+        <option value="all" data-i18n="scopeAll">All text</option>
+      </select>
+      <p class="hint" data-i18n="localFontHint">Leave empty to use the bundled font. If the font isn't installed, the bundled one is used automatically.</p>
     </section>
 
     <section class="block">

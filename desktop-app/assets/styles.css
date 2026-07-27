@@ -1,0 +1,250 @@
+/* ============================================================================
+ * RTL for Claude — Claude Desktop stylesheet (macOS patcher variant)
+ *
+ * Injected by assets/driver.js as a <style> element inside the claude.ai
+ * window of Claude Desktop. Deliberately a copy of
+ * browser-extension/src/styles.css MINUS its @font-face blocks: those load
+ * the font from the extension origin, which does not exist here. The app's
+ * CSP is `font-src 'self' data:` with `connect-src 'none'`, so apply-rtl.sh
+ * prepends an @font-face with the Vazirmatn variable font embedded as a
+ * base64 data: URI at patch time (the only source that works), then ships
+ * font + this file together, base64-encoded, inside the injected JS block.
+ * Keep the rules below in sync with the browser sheet.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ * Direction. The JS engine adds these classes to text-bearing block elements
+ * it has classified. We use classes (not only the dir attribute) so the user
+ * can tune alignment/font without us touching inline styles on every node.
+ * ------------------------------------------------------------------------- */
+.rtlx-rtl {
+  direction: rtl !important;
+  text-align: right !important;
+  /* Numerals/parentheses inside RTL still resolve correctly via the bidi
+     algorithm; we only flip the block direction. */
+}
+
+.rtlx-ltr {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* AUTO is the default for normal (non-pinned) text: the engine sets dir="auto"
+   and the BROWSER resolves each paragraph's direction from its first strong
+   character — stable while streaming, so the text never jumps left↔right.
+   text-align:start then follows that resolved direction (right for Persian,
+   left for English) and overrides whatever the site set. */
+.rtlx-auto {
+  text-align: start !important;
+}
+
+/* Font family is a SEPARATE concern from direction: the user may want the
+   pretty Persian font only where it's RTL. A CSS variable lets the driver
+   switch fonts without rewriting classes. */
+:root {
+  --rtlx-font-stack: "Vazirmatn RTLX", "Vazirmatn", "Sahel", "Tahoma", sans-serif;
+  --rtlx-font-scale: 1;
+  --rtlx-line-height: 1.85;
+  --rtlx-letter-spacing: 0;
+}
+
+/* ===========================================================================
+ * PRIMARY direction mechanism — marker on a STABLE ancestor, never on the
+ * streamed paragraphs themselves. The engine sets [data-rtlx-seen] on a message's
+ * stable container once it shows Persian; the floating toggle sets
+ * [data-rtlx-force-all] on <html>. These rules then style every prose descendant
+ * — including any paragraph the app re-creates mid-stream — automatically. Since
+ * we write NOTHING to the volatile <p>/<li>, the app has nothing to wipe, so the
+ * direction can never ping-pong (the "jumping"). `!important` beats the app's own
+ * `dir` attribute (a low-specificity presentational hint) and its stylesheet.
+ * ========================================================================= */
+[data-rtlx-seen] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption),
+[data-rtlx-force-all="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
+  direction: rtl !important;
+  text-align: right !important;
+  /* Claude ships `unicode-bidi: plaintext` on exactly these tags, which makes
+     the browser take each paragraph's base direction from its FIRST STRONG
+     character and IGNORE `direction` entirely. A Persian paragraph opening with
+     an English word ("authorization اصلاً …") therefore resolved to an LTR base
+     and rendered that word at the far left — visually the end of the sentence.
+     Restoring `isolate` (the HTML default for these tags) makes `direction`
+     authoritative again. */
+  unicode-bidi: isolate !important;
+  font-family: var(--rtlx-font-stack) !important;
+  line-height: var(--rtlx-line-height) !important;
+  letter-spacing: var(--rtlx-letter-spacing) !important;
+}
+[data-rtlx-force-all="ltr"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+/* Persian font on inner runs too (sites set font on bold/links/spans). :where()
+   keeps specificity 0 so the monospace reset below still wins inside code. */
+[data-rtlx-seen] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) :where(:not(pre, code, kbd, samp)),
+[data-rtlx-force-all="rtl"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) :where(:not(pre, code, kbd, samp)) {
+  font-family: var(--rtlx-font-stack) !important;
+}
+/* Code / preformatted stays LTR + monospace inside an RTL message. */
+[data-rtlx-seen] :is(pre, code, kbd, samp), [data-rtlx-seen] :is(pre, code) *,
+[data-rtlx-force-all="rtl"] :is(pre, code, kbd, samp), [data-rtlx-force-all="rtl"] :is(pre, code) * {
+  direction: ltr !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace !important;
+}
+/* Inline LTR runs (links, inline code, numbers) inside RTL prose stay put. */
+[data-rtlx-seen] :is(p, li, td, blockquote) :is(a, code, time, tt),
+[data-rtlx-force-all="rtl"] :is(p, li, td, blockquote) :is(a, code, time, tt) {
+  unicode-bidi: isolate;
+}
+
+.rtlx-font {
+  font-family: var(--rtlx-font-stack) !important;
+  line-height: var(--rtlx-line-height) !important;
+  letter-spacing: var(--rtlx-letter-spacing) !important;
+}
+
+/* Some sites set font-family on INNER runs (bold/links/spans), which would beat
+   the value inherited from the block and leave the page font showing. Force the
+   Persian font onto descendants too. `:where()` gives this rule ZERO specificity
+   so the monospace reset below (real specificity) still wins inside code, and
+   our own toggle keeps its system font. */
+.rtlx-font :where(:not(pre, code, kbd, samp, .rtlx-global-toggle)) {
+  font-family: var(--rtlx-font-stack) !important;
+}
+
+/* Slightly larger glyphs read better for Persian; opt-in via scale > 1. */
+.rtlx-scale {
+  font-size: calc(1em * var(--rtlx-font-scale)) !important;
+}
+
+/* Never touch code: keep monospace + LTR even when the engine processed a
+   parent. The engine also skips <pre>/<code>, this is belt-and-suspenders. */
+.rtlx-rtl pre, .rtlx-auto pre,
+.rtlx-rtl pre *, .rtlx-auto pre *,
+.rtlx-rtl code, .rtlx-auto code,
+.rtlx-rtl code *, .rtlx-auto code *,
+.rtlx-rtl kbd, .rtlx-auto kbd,
+.rtlx-rtl samp, .rtlx-auto samp {
+  direction: ltr !important;
+  text-align: left !important;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace !important;
+  unicode-bidi: embed;
+}
+
+/* Lists & quotes: mirror their decorations under RTL. */
+.rtlx-rtl ul,
+.rtlx-rtl ol {
+  padding-right: 1.5em;
+  padding-left: 0;
+}
+.rtlx-rtl blockquote {
+  border-right: 3px solid currentColor;
+  border-left: none;
+  padding-right: 1em;
+  padding-left: 0;
+}
+
+/* Compose box (contenteditable / textarea) flips per typed content. */
+.rtlx-input {
+  /* dir="auto" (set by the engine) handles direction + alignment;
+     we only add the font so the caret and glyphs never desync. */
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", Tahoma, sans-serif) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Inline isolation. Inside an RTL paragraph, runs of LTR content — links,
+ * inline code, file paths, numbers, math — must NOT reorder or jump to the
+ * wrong side. `unicode-bidi: isolate` makes the bidi algorithm treat each as a
+ * single neutral unit, so version strings and inline `code` stay put.
+ * ------------------------------------------------------------------------- */
+.rtlx-rtl a, .rtlx-auto a,
+.rtlx-rtl code, .rtlx-auto code,
+.rtlx-rtl time, .rtlx-auto time,
+.rtlx-rtl tt, .rtlx-auto tt,
+.rtlx-rtl [class*="katex"], .rtlx-auto [class*="katex"],
+.rtlx-rtl [class*="math"], .rtlx-auto [class*="math"] {
+  unicode-bidi: isolate;
+}
+
+/* ---------------------------------------------------------------------------
+ * Math islands. The engine wraps raw LaTeX and bare arithmetic found inside
+ * RTL prose in [data-rtlx-island] spans (with matching inline styles); this
+ * rule is the durable copy so site CSS can never re-mirror "2 + 3 = 5".
+ * ------------------------------------------------------------------------- */
+[data-rtlx-island] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tables. A standalone RTL table (outside any [data-rtlx-seen] container) is
+ * flipped by the engine via data-rtlx-table; counter-flow cells get their own
+ * direction back via data-rtlx-cell. Specificity note: the two-attribute
+ * variants (0,2,0) out-rank the [data-rtlx-seen] :is(…td…) block rule (0,1,1),
+ * so a cell can win back its direction inside a SEEN container; the bare
+ * (0,1,0) variant loses to an explicit force-all pin (0,1,1) — by design, a
+ * user pin beats per-cell nuance (the engine also stands down while pinned).
+ * ------------------------------------------------------------------------- */
+table[data-rtlx-table="rtl"] {
+  direction: rtl !important;
+}
+[data-rtlx-seen] [data-rtlx-cell="ltr"],
+[data-rtlx-cell="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+[data-rtlx-seen] [data-rtlx-cell="rtl"],
+[data-rtlx-cell="rtl"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Floating direction toggle (one per window, injected by driver.js into <body>).
+ * Pins the WHOLE conversation: auto (⇌) → RTL → LTR → auto. Fixed to the
+ * viewport so it works regardless of message structure. Lives in the
+ * bottom-right corner, faint until hovered.
+ * ------------------------------------------------------------------------- */
+.rtlx-global-toggle {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 2147483000; /* above page content; clear of the app's own overlays */
+  min-width: 34px;
+  height: 34px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 12px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: rgba(38, 38, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  opacity: 0.85;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  direction: ltr; /* the label "RTL"/"LTR"/"⇌" itself stays LTR */
+}
+.rtlx-global-toggle:hover,
+.rtlx-global-toggle:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+  outline: none;
+}
+/* Tinted when a manual pin is active (auto-detect overridden). */
+.rtlx-global-toggle[data-state="rtl"],
+.rtlx-global-toggle[data-state="ltr"] {
+  opacity: 0.95;
+  background: rgba(217, 119, 87, 0.9);
+  border-color: rgba(217, 119, 87, 0.95);
+}

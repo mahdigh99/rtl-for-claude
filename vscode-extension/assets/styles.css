@@ -16,6 +16,7 @@
 .rtlx-font {
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
   line-height: var(--rtlx-line-height, 1.85) !important;
+  letter-spacing: var(--rtlx-letter-spacing, 0) !important;
   font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;
 }
 
@@ -42,6 +43,10 @@
   unicode-bidi: isolate !important;
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
   line-height: var(--rtlx-line-height, 1.85) !important;
+  /* Letter spacing rides with the font, like the browser sheet. The `0`
+     fallback keeps the declaration valid on a CSS-only patch (no driver, so no
+     variable) — an unset var() here would invalidate the whole rule. */
+  letter-spacing: var(--rtlx-letter-spacing, 0) !important;
 }
 [data-rtlx-force-all="ltr"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption),
 [data-rtlx-force="ltr"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, table, td, th, dd, dt, summary, figcaption) {

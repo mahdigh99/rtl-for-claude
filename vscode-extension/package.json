@@ -26,14 +26,34 @@
   ],
   "keywords": [
     "rtl",
+    "right-to-left",
+    "bidi",
+    "bidirectional",
+    "direction",
     "persian",
     "farsi",
     "arabic",
     "urdu",
     "hebrew",
+    "kurdish",
+    "pashto",
+    "sindhi",
+    "uyghur",
+    "dhivehi",
     "claude",
-    "bidi",
-    "vazirmatn"
+    "claude code",
+    "anthropic",
+    "vazirmatn",
+    "font",
+    "typography",
+    "chat",
+    "webview",
+    "localization",
+    "i18n",
+    "l10n",
+    "iran",
+    "middle east",
+    "markdown preview"
   ],
   "icon": "icon.png",
   "activationEvents": [
@@ -53,35 +73,47 @@
     "commands": [
       {
         "command": "rtlForClaude.toggle",
-        "title": "Turn On / Off",
-        "category": "RTL for Claude"
+        "title": "%cmd.toggle%",
+        "category": "%cmd.category%"
       },
       {
         "command": "rtlForClaude.toggleSidebar",
-        "title": "Show / Hide Sidebar Panel",
-        "category": "RTL for Claude"
+        "title": "%cmd.toggleSidebar%",
+        "category": "%cmd.category%"
       },
       {
         "command": "rtlForClaude.apply",
-        "title": "Re-apply to the chat now",
-        "category": "RTL for Claude"
+        "title": "%cmd.apply%",
+        "category": "%cmd.category%"
       },
       {
         "command": "rtlForClaude.remove",
-        "title": "Restore original chat (run before uninstalling)",
-        "category": "RTL for Claude"
+        "title": "%cmd.remove%",
+        "category": "%cmd.category%"
       },
       {
         "command": "rtlForClaude.openSettings",
-        "title": "Open Settings",
-        "category": "RTL for Claude"
+        "title": "%cmd.openSettings%",
+        "category": "%cmd.category%"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "rtlForClaude.toggle",
+        "key": "ctrl+shift+8",
+        "mac": "cmd+shift+8"
+      },
+      {
+        "command": "rtlForClaude.apply",
+        "key": "ctrl+shift+7",
+        "mac": "cmd+shift+7"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "rtlForClaude",
-          "title": "RTL for Claude",
+          "title": "%view.title%",
           "icon": "media/panel-icon.svg"
         }
       ]
@@ -91,37 +123,37 @@
         {
           "type": "webview",
           "id": "rtlForClaude.panel",
-          "name": "RTL for Claude",
+          "name": "%view.title%",
           "when": "config.rtlForClaude.showInActivityBar"
         }
       ]
     },
     "configuration": {
-      "title": "RTL for Claude",
+      "title": "%config.title%",
       "properties": {
         "rtlForClaude.enabled": {
           "type": "boolean",
           "default": true,
           "order": 0,
-          "markdownDescription": "Turn right-to-left support **on or off** in the Claude Code chat. (Reload the window after changing.)"
+          "markdownDescription": "%config.enabled%"
         },
         "rtlForClaude.autoApplyOnStartup": {
           "type": "boolean",
           "default": true,
           "order": 1,
-          "markdownDescription": "Re-apply automatically on startup — needed because every Claude Code update overwrites the patch."
+          "markdownDescription": "%config.autoApplyOnStartup%"
         },
         "rtlForClaude.showInActivityBar": {
           "type": "boolean",
           "default": true,
           "order": 10,
-          "description": "Show the RTL for Claude panel (big icon) in the left Activity Bar."
+          "description": "%config.showInActivityBar%"
         },
         "rtlForClaude.showStatusBar": {
           "type": "boolean",
           "default": true,
           "order": 11,
-          "description": "Show the small RTL on/off item in the status bar."
+          "description": "%config.showStatusBar%"
         },
         "rtlForClaude.language": {
           "type": "string",
@@ -133,7 +165,7 @@
             "ur"
           ],
           "enumDescriptions": [
-            "Follow the VS Code display language (falls back to English).",
+            "%config.language.auto%",
             "English",
             "فارسی (Persian)",
             "العربية (Arabic)",
@@ -141,7 +173,7 @@
           ],
           "default": "auto",
           "order": 1.5,
-          "description": "Language of the RTL for Claude side panel."
+          "description": "%config.language%"
         },
         "rtlForClaude.font.family": {
           "type": "string",
@@ -153,13 +185,13 @@
           ],
           "default": "Vazirmatn",
           "order": 2,
-          "description": "Font used for right-to-left text. Pick \"Custom\" to use your own font (set it in Custom font family)."
+          "description": "%config.font.family%"
         },
         "rtlForClaude.font.custom": {
           "type": "string",
           "default": "",
           "order": 2.5,
-          "markdownDescription": "Your own font family name (used only when Font is set to **Custom**), e.g. `Estedad` or `IRANSans`. The font must be installed on your system. Vazirmatn is kept as a fallback."
+          "markdownDescription": "%config.font.custom%"
         },
         "rtlForClaude.font.scale": {
           "type": "number",
@@ -167,7 +199,7 @@
           "minimum": 0.8,
           "maximum": 1.6,
           "order": 3,
-          "description": "Size of RTL text relative to the editor default (1 = 100%)."
+          "description": "%config.font.scale%"
         },
         "rtlForClaude.font.lineHeight": {
           "type": "number",
@@ -175,7 +207,15 @@
           "minimum": 1.3,
           "maximum": 2.5,
           "order": 4,
-          "description": "Line spacing for right-to-left text."
+          "description": "%config.font.lineHeight%"
+        },
+        "rtlForClaude.font.letterSpacing": {
+          "type": "number",
+          "default": 0,
+          "minimum": -0.05,
+          "maximum": 0.2,
+          "order": 4.5,
+          "markdownDescription": "%config.font.letterSpacing%"
         },
         "rtlForClaude.detection.mode": {
           "type": "string",
@@ -184,38 +224,38 @@
             "first-strong"
           ],
           "enumDescriptions": [
-            "Smart: a paragraph goes RTL once enough of its letters are RTL (best for text full of English terms).",
-            "Use the first strong character, like the browser's native dir=\"auto\"."
+            "%config.detection.mode.ratio%",
+            "%config.detection.mode.firstStrong%"
           ],
           "default": "ratio",
           "order": 5,
-          "description": "How the direction of each paragraph is decided."
+          "description": "%config.detection.mode%"
         },
         "rtlForClaude.detection.threshold": {
           "type": "number",
-          "default": 0.3,
+          "default": 0.1,
           "minimum": 0.1,
           "maximum": 0.7,
           "order": 6,
-          "markdownDescription": "Smart mode only: minimum share of RTL letters (0.1–0.7) for a paragraph to become RTL. Lower = flips more easily."
+          "markdownDescription": "%config.detection.threshold%"
         },
         "rtlForClaude.applyToInput": {
           "type": "boolean",
           "default": true,
           "order": 7,
-          "description": "Also flip the message box to RTL as you type."
+          "description": "%config.applyToInput%"
         },
         "rtlForClaude.showMessageToggles": {
           "type": "boolean",
           "default": true,
           "order": 8,
-          "description": "Show a small toggle on each message to override its direction by hand."
+          "description": "%config.showMessageToggles%"
         },
         "rtlForClaude.keepCodeLeftToRight": {
           "type": "boolean",
           "default": true,
           "order": 9,
-          "description": "Keep code blocks, diffs and terminals left-to-right."
+          "description": "%config.keepCodeLeftToRight%"
         },
         "rtlForClaude.togglePlacement": {
           "type": "string",
@@ -225,13 +265,13 @@
             "hidden"
           ],
           "enumDescriptions": [
-            "Dock the Auto/RTL/LTR button in the panel's top toolbar, next to New session / Session history.",
-            "Show it as a floating pill in the bottom corner of the chat.",
-            "Hide it — control direction from settings or the per-message toggles instead."
+            "%config.togglePlacement.toolbar%",
+            "%config.togglePlacement.floating%",
+            "%config.togglePlacement.hidden%"
           ],
           "default": "toolbar",
           "order": 10,
-          "description": "Where the whole-chat direction button lives."
+          "description": "%config.togglePlacement%"
         }
       }
     }

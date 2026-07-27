@@ -36,7 +36,9 @@ Automatic RTL + the gorgeous Vazirmatn font. Zero setup.
 - 🔤 **Beautiful typography** — the bundled Vazirmatn font, with tunable size & spacing.
 - ⌨️ **Smart compose box** — flips the moment you start typing.
 - 🧩 **Never breaks code** — code blocks, diffs and terminals stay left-to-right.
-- 🎛️ **One-click override** — a tiny toggle on any message for when you disagree.
+- 🎛️ **One-click override** — a floating Auto / RTL / LTR button pins the whole
+  chat (`Cmd/Ctrl + Shift + 9`); in the Claude Code chat, every message also gets
+  its own ⇌ toggle.
 - 🧠 **Beyond Claude** — also works on ChatGPT & Gemini.
 - 🔒 **Private by design** — 100% local. No servers, no tracking, ever.
 
@@ -83,8 +85,9 @@ named Codex, although its installed extension identifier remains
 
 ## 🎛️ Make it yours
 
-Click the toolbar icon to fine-tune detection sensitivity, font, text size,
-line spacing, the per-message toggle, and which sites it runs on.
+Click the toolbar icon to fine-tune detection sensitivity, font (bundled or one
+installed on your computer), text size, line spacing, the floating direction
+button, the popup's language, and which sites it runs on — including your own.
 
 ## 🔒 Privacy
 

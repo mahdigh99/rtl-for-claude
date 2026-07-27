@@ -87,6 +87,7 @@
       <div class="row" id="customFontRow"><label data-i18n="customFont">Custom font family</label><span class="ctl"><input type="text" id="font.custom" data-i18n-ph="customFontPh" placeholder="e.g. Estedad" spellcheck="false" /></span></div>
       <div class="row"><label data-i18n="textSize">Text size</label><span class="ctl"><input type="range" id="font.scale" min="0.8" max="1.6" step="0.05" /><span class="val" id="font.scale_v"></span></span></div>
       <div class="row"><label data-i18n="lineSpacing">Line spacing</label><span class="ctl"><input type="range" id="font.lineHeight" min="1.3" max="2.5" step="0.05" /><span class="val" id="font.lineHeight_v"></span></span></div>
+      <div class="row"><label data-i18n="letterSpacing">Letter spacing</label><span class="ctl"><input type="range" id="font.letterSpacing" min="-0.05" max="0.2" step="0.01" /><span class="val" id="font.letterSpacing_v"></span></span></div>
     </div>
 
     <div class="card">
@@ -138,6 +139,7 @@
       customFontPh: "مثلاً Estedad",
       textSize: "اندازهٔ متن",
       lineSpacing: "فاصلهٔ خط‌ها",
+      letterSpacing: "فاصلهٔ حروف",
       detection: "تشخیص",
       detSmart: "هوشمند (نسبت)",
       detFirst: "حرفِ اول",
@@ -167,6 +169,7 @@
       customFontPh: "مثال: Estedad",
       textSize: "حجم النص",
       lineSpacing: "تباعد الأسطر",
+      letterSpacing: "تباعد الحروف",
       detection: "الاكتشاف",
       detSmart: "ذكي (نسبة)",
       detFirst: "أول حرف",
@@ -196,6 +199,7 @@
       customFontPh: "مثلاً Estedad",
       textSize: "متن کا سائز",
       lineSpacing: "سطروں کا فاصلہ",
+      letterSpacing: "حروف کا فاصلہ",
       detection: "پہچان",
       detSmart: "سمارٹ (تناسب)",
       detFirst: "پہلا حرف",
@@ -244,7 +248,7 @@
   const BOOL = ["enabled", "applyToInput", "showMessageToggles", "keepCodeLeftToRight", "autoApplyOnStartup", "showInActivityBar", "showStatusBar"];
   const SEL = ["font.family", "detection.mode", "togglePlacement", "language"];
   const TEXT = ["font.custom"];
-  const NUM = ["font.scale", "font.lineHeight", "detection.threshold"];
+  const NUM = ["font.scale", "font.lineHeight", "font.letterSpacing", "detection.threshold"];
   const send = (key, value) => vscode.postMessage({ type: "set", key, value });
   const fmt = (id, v) => { const e = $(id + "_v"); if (e) e.textContent = id === "font.scale" ? Math.round(v * 100) + "%" : (+v).toFixed(2); };
   function syncThreshold() { $("thrRow").style.display = $("detection.mode").value === "ratio" ? "" : "none"; }

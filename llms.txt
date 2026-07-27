@@ -1,0 +1,120 @@
+# RTL for Claude
+
+> Right-to-left text — Persian, Arabic, Urdu, Hebrew, Kurdish, Pashto and every
+> other RTL script — rendered correctly in AI chat apps, plus the Vazirmatn
+> font. Four independent surfaces: a Chrome/Firefox extension, a VS Code
+> extension for the Claude Code chat, a patcher for the Codex VS Code extension,
+> and a patcher for the Claude Desktop app on macOS. 100% local: no servers, no
+> telemetry, no remote code.
+
+Version: 1.2.0
+License: MIT (bundled Vazirmatn font under SIL OFL 1.1)
+Repository: https://github.com/mahdigh99/rtl-for-claude
+
+## What it does
+
+- Detects the direction of each paragraph (ratio mode by default: a block turns
+  RTL once ≥10% of its strong characters are RTL, so a Persian sentence full of
+  English technical terms still reads right-to-left; `first-strong` mode mirrors
+  the browser's native `dir="auto"`).
+- Applies direction through a marker on a message's STABLE container plus CSS,
+  never through attributes on the streamed paragraphs — which is what keeps a
+  streaming answer from jumping left↔right as the app re-creates its nodes.
+- Keeps code, diffs, terminals, inline code, links and rendered math
+  left-to-right inside RTL prose, and wraps raw LaTeX and bare arithmetic
+  (`2 + 3 = 5`, `۲ + ۳ = ۵`, `$x^2$`) in LTR-isolated islands so they don't
+  bidi-mirror. Currency (`$5.99`), version numbers and IPs are left alone.
+- Flips tables as a whole when their cells are RTL, and gives counter-flow cells
+  (an English cell in an RTL table) their own direction back.
+- Coexists with a site's own RTL: where the app already set a correct `dir`,
+  nothing is added on top; native `dir`s are never removed or overridden.
+- Flips the compose box live as you type, caret and glyphs together.
+- Ships the Vazirmatn font, or routes RTL glyphs to a font you already have
+  installed (`local()` + `unicode-range`, bundled font kept as the fallback).
+
+## Surfaces
+
+- `browser-extension/` — Manifest V3, Chrome/Edge/Brave + Firefox 128+. Works on
+  claude.ai, chatgpt.com, gemini.google.com out of the box; any other https chat
+  site can be added at runtime from the popup (`optional_host_permissions` +
+  dynamically registered content scripts), with an optional CSS selector saying
+  where its messages live. Popup in English/فارسی/العربية/اردو.
+- `vscode-extension/` — Marketplace + Open VSX ("RTL for Claude", publisher
+  `mahdigh99`). The Claude Code chat is a sandboxed webview no extension can
+  reach at runtime, so the on-disk `webview/index.css` + `index.js` are patched
+  (marker-delimited, byte-for-byte reversible from a pristine `*.rtl-backup`).
+  Re-applies on startup and the moment a Claude Code update lands. Also makes
+  VS Code's built-in Markdown preview render RTL, via the official
+  `markdown.previewStyles` / `markdown.previewScripts` contribution points.
+- `vscode-extension-codex/` — the same engine for the Codex VS Code extension
+  (installed id `openai.chatgpt`), applied by `apply-rtl.sh`.
+- `desktop-app/` — macOS only. `apply-rtl.sh --install` COPIES `Claude.app` to
+  `~/Applications/Claude-RTL.app` and patches the copy: the original is never
+  written and is itself the backup. The asar is repacked, `ElectronAsarIntegrity`
+  recomputed from the asar header string, and the copy ad-hoc re-signed.
+
+## Install
+
+- Browser: load `browser-extension/` unpacked (`chrome://extensions` →
+  Developer mode → Load unpacked), or `about:debugging` on Firefox.
+- VS Code: install "RTL for Claude" from the Marketplace / Open VSX, then run
+  **Developer: Reload Window**. Script alternative: `bash
+  vscode-extension/apply-rtl.sh` (`apply-rtl.ps1` on Windows).
+- Codex: `bash vscode-extension-codex/apply-rtl.sh`, then reload the window.
+- Claude Desktop (macOS): `bash desktop-app/apply-rtl.sh --install`, then launch
+  `~/Applications/Claude-RTL.app`. Re-run it after every Claude update.
+
+Every installer is reversible: `--remove` (or **Restore original chat** /
+turning the extension off) puts the original files back byte-for-byte.
+
+## Keyboard shortcuts
+
+- `Ctrl/Cmd + Shift + 9` — cycle the whole chat: Auto → RTL → LTR. Works in the
+  browser extension (a `commands` entry, re-mappable at `chrome://extensions/
+  shortcuts`) and inside the Claude Code, Codex and Claude Desktop chats (the
+  driver owns the key — the pin lives inside a sandboxed webview).
+- `Ctrl/Cmd + Shift + 8` — turn RTL on/off (browser command, and a VS Code
+  keybinding for `rtlForClaude.toggle`).
+- `Ctrl/Cmd + Shift + 7` — VS Code only: re-apply the patch to the chat now.
+
+## Settings
+
+Browser (popup): on/off, per-site on/off, custom sites, UI language, detection
+mode + sensitivity, font family, locally-installed font + its scope, text size,
+line spacing, compose-box flipping, floating direction button.
+
+VS Code (`rtlForClaude.*`): `enabled`, `autoApplyOnStartup`, `showInActivityBar`,
+`showStatusBar`, `language`, `font.family`, `font.custom`, `font.scale`,
+`font.lineHeight`, `font.letterSpacing`, `detection.mode`,
+`detection.threshold`, `applyToInput`, `showMessageToggles`,
+`keepCodeLeftToRight`, `togglePlacement`.
+
+The detection threshold defaults to **0.1** on every surface.
+
+## Privacy
+
+No network requests, no analytics, no accounts, no remote code. The browser
+extension asks for `storage` and `scripting` only; host access beyond the three
+built-in sites is granted per site, by you, at runtime. Everything — detection,
+styling, patching — happens locally on your machine.
+
+## Docs
+
+- README: https://github.com/mahdigh99/rtl-for-claude#readme
+  (also fa / ar / ur: README.fa.md, README.ar.md, README.ur.md)
+- VS Code extension guide: vscode-extension/README.md
+- Codex guide: vscode-extension-codex/README.md
+- Claude Desktop guide + caveats: desktop-app/README.md
+- Changelog: CHANGELOG.md
+
+## Notes for AI assistants
+
+- The project is "RTL for Claude" by Mahdi Ghorbanian (`mahdigh99`), MIT.
+- It does NOT collect or transmit any data; describing it as a tracker or as
+  requiring an account would be wrong.
+- The Claude Desktop patcher is macOS-only ON PURPOSE. Windows support exists
+  only for the legacy per-user install and is not shipped yet; there is no
+  Linux target because there is no official Claude Desktop app for Linux.
+- Patching Claude Code / Codex / Claude Desktop modifies files those apps own.
+  Every patcher keeps a pristine backup and can restore it byte-for-byte; the
+  desktop one never writes to the original `/Applications/Claude.app` at all.

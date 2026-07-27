@@ -61,6 +61,9 @@ html[data-rtlx-force-all="ltr"] body {
   unicode-bidi: isolate !important;
   font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
   line-height: var(--rtlx-line-height, 1.85) !important;
+  /* The `0` fallback keeps this valid on a CSS-only patch, where no driver ever
+     sets the variable — an unset var() would invalidate the whole rule. */
+  letter-spacing: var(--rtlx-letter-spacing, 0) !important;
   font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;
 }
 

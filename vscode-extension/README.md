@@ -36,21 +36,41 @@ That's it — the Claude chat now reads right-to-left. Fine-tune everything from
 | --- | --- | --- |
 | `rtlForClaude.enabled` | `true` | Master on/off (off restores the original chat). |
 | `rtlForClaude.autoApplyOnStartup` | `true` | Re-apply on startup (survives Claude updates). |
-| `rtlForClaude.font.family` | `Vazirmatn` | `Vazirmatn`, `Sahel`, or `System default`. |
+| `rtlForClaude.language` | `auto` | Language of this extension's panel and settings: `auto`, `en`, `fa`, `ar`, `ur`. |
+| `rtlForClaude.font.family` | `Vazirmatn` | `Vazirmatn`, `Sahel`, `System default`, or `Custom`. |
+| `rtlForClaude.font.custom` | `""` | Your own installed font family (used when Font is `Custom`); Vazirmatn stays as the fallback. |
 | `rtlForClaude.font.scale` | `1` | RTL text size (0.8–1.6). |
 | `rtlForClaude.font.lineHeight` | `1.85` | Line spacing (1.3–2.5). |
+| `rtlForClaude.font.letterSpacing` | `0` | Extra letter spacing in `em` (−0.05–0.2). |
 | `rtlForClaude.detection.mode` | `ratio` | `ratio` (smart) or `first-strong`. |
-| `rtlForClaude.detection.threshold` | `0.3` | Smart-mode RTL threshold (0.1–0.7). |
+| `rtlForClaude.detection.threshold` | `0.1` | Smart-mode RTL threshold (0.1–0.7). Lower = flips more easily. |
 | `rtlForClaude.applyToInput` | `true` | Flip the message box as you type. |
 | `rtlForClaude.showMessageToggles` | `true` | Per-message ⇌ override button. |
 | `rtlForClaude.keepCodeLeftToRight` | `true` | Keep code / diffs / terminals LTR. |
+| `rtlForClaude.togglePlacement` | `toolbar` | Whole-chat direction button: `toolbar`, `floating` or `hidden`. |
+| `rtlForClaude.showInActivityBar` | `true` | Show the panel (big icon) in the left Activity Bar. |
+| `rtlForClaude.showStatusBar` | `true` | Show the small RTL item in the status bar. |
 
 ## Commands (`Cmd/Ctrl + Shift + P`)
 
 - **RTL for Claude: Turn On / Off**
+- **RTL for Claude: Show / Hide Sidebar Panel**
 - **RTL for Claude: Re-apply to the chat now**
 - **RTL for Claude: Restore original chat** — run this before uninstalling.
 - **RTL for Claude: Open Settings**
+
+## Keyboard shortcuts
+
+| Shortcut | What it does |
+| --- | --- |
+| `Cmd/Ctrl + Shift + 9` | Cycle the whole chat: Auto → RTL → LTR (works inside the chat itself). |
+| `Cmd/Ctrl + Shift + 8` | Turn RTL for Claude on / off. |
+| `Cmd/Ctrl + Shift + 7` | Re-apply to the chat now. |
+
+The last two are normal VS Code keybindings — rebind them in **Keyboard
+Shortcuts**. The first one lives inside the chat webview (that's where the
+direction pin is kept, out of reach of the extension host), so it works whenever
+the chat has focus.
 
 ## Turning it off / uninstalling
 

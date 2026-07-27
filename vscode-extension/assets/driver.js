@@ -18,6 +18,11 @@
       fontStack: '"Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif',
       fontScale: 1,
       lineHeight: 1.85,
+      letterSpacing: 0,
+      // Detection defaults, matching the browser engine's exactly (rtl-engine.js
+      // DEFAULT_THRESHOLD). The extension injects the user's values on top.
+      mode: "ratio", // ratio | first-strong
+      threshold: 0.1,
       applyToInput: true,
       showToggles: true,
       keepCodeLTR: true,
@@ -42,12 +47,20 @@
   // the same accumulated text → the same decision). The toggle pins exact dir.
   var RTL_G = new RegExp(RTL_RE.source, "g");
   var LTR_G = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿḀ-ỿ]/g;
+  var FIRST_STRONG_RE = new RegExp("[" + RTL_RE.source.slice(1, -1) + "A-Za-zÀ-ɏͰ-ϿЀ-ӿḀ-ỿ]");
   function dirByRatio(text, thr) {
     if (!text) return null;
     var s = text.length > 600 ? text.slice(0, 600) : text;
+    // "First letter" mode mirrors the browser's native dir="auto": the first
+    // strong character decides, regardless of what follows.
+    if (S.mode === "first-strong") {
+      var m = s.match(FIRST_STRONG_RE);
+      if (!m) return null;
+      return RTL_RE.test(m[0]) ? "rtl" : "ltr";
+    }
     var r = (s.match(RTL_G) || []).length, l = (s.match(LTR_G) || []).length;
     if (!(r + l)) return null;
-    return r / (r + l) >= (thr || 0.1) ? "rtl" : "ltr";
+    return r / (r + l) >= (typeof thr === "number" ? thr : S.threshold) ? "rtl" : "ltr";
   }
 
   // The compose box paints TRANSPARENT text in the contenteditable
@@ -71,6 +84,9 @@
     de.style.setProperty("--rtlx-font-stack", S.fontStack);
     de.style.setProperty("--rtlx-font-scale", String(S.fontScale));
     de.style.setProperty("--rtlx-line-height", String(S.lineHeight));
+    // Unitless 0 is a valid letter-spacing only as the keyword `normal`; the
+    // stylesheet's fallback handles the absent case, so always emit `em`.
+    de.style.setProperty("--rtlx-letter-spacing", Number(S.letterSpacing || 0) + "em");
     de.classList.toggle("rtlx-code-ltr", !!S.keepCodeLTR);
   }
 
@@ -441,15 +457,32 @@
     gEl.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      globalForce = globalForce === "auto" ? "rtl" : globalForce === "rtl" ? "ltr" : "auto";
-      if (globalForce === "auto") de.removeAttribute(FORCE_ALL);
-      else de.setAttribute(FORCE_ALL, globalForce);
-      saveForce(globalForce); // survive webview reloads
-      gLabel();
+      cycleGlobalForce(); // same path as the keyboard shortcut
     });
     gLabel();
     document.body.appendChild(gEl); // provisional; placeToggle may dock it
     placeToggle();
+  }
+
+  // --- keyboard shortcut -----------------------------------------------------
+  // Ctrl/Cmd+Shift+9 cycles Auto → RTL → LTR, the same states the button walks.
+  // A VS Code `contributes.keybindings` entry could never do this: the pin lives
+  // inside the sandboxed webview, unreachable from the extension host. Keyed on
+  // e.code (physical key), not e.key — on a Persian keyboard layout `9` types a
+  // different character, and the shortcut must still work there.
+  function cycleGlobalForce() {
+    globalForce = globalForce === "auto" ? "rtl" : globalForce === "rtl" ? "ltr" : "auto";
+    if (globalForce === "auto") de.removeAttribute(FORCE_ALL);
+    else de.setAttribute(FORCE_ALL, globalForce);
+    saveForce(globalForce);
+    gLabel();
+  }
+  function onKeydown(e) {
+    if (!e || !(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return;
+    if (e.code !== "Digit9") return;
+    e.preventDefault();
+    e.stopPropagation();
+    cycleGlobalForce();
   }
 
   // --- throttled observer ----------------------------------------------------
@@ -483,6 +516,9 @@
         characterData: true,
       });
     } catch (e) {}
+    // Capture phase: the chat's own editor swallows plenty of keys on the way
+    // down, and the shortcut must work while the composer has focus.
+    document.addEventListener("keydown", onKeydown, true);
     if (S.applyToInput) {
       document.addEventListener(
         "input",

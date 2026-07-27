@@ -1,0 +1,30 @@
+# RTL for Claude
+
+> Makes right-to-left languages (Persian, Arabic, Urdu, Hebrew, Kurdish, Pashto…)
+> read correctly in AI chats, with the Vazirmatn font. 100% local — no servers,
+> no telemetry.
+
+Version: 1.2.0
+License: MIT · Repository: https://github.com/mahdigh99/rtl-for-claude
+
+Four surfaces, all reversible:
+
+- Browser extension (Chrome/Edge/Brave, Firefox 128+) for claude.ai, ChatGPT,
+  Gemini, plus any chat site you add yourself from the popup.
+- VS Code extension for the Claude Code chat (Marketplace + Open VSX,
+  `mahdigh99.rtl-for-claude`); also makes VS Code's Markdown preview RTL.
+- Patcher for the Codex VS Code extension (`vscode-extension-codex/apply-rtl.sh`).
+- Patcher for the Claude Desktop app on macOS — it patches a COPY at
+  `~/Applications/Claude-RTL.app` and never touches the original.
+
+How it decides direction: per paragraph, by ratio — a block turns RTL once ≥10%
+of its strong characters are RTL (so Persian full of English terms still reads
+right-to-left), with `first-strong` as an alternative mode. Code, diffs,
+terminals, links, inline code and rendered math stay left-to-right; raw LaTeX
+and bare arithmetic are isolated so they don't mirror; tables flip as a whole
+with counter-flow cells keeping their own direction.
+
+Shortcut: `Ctrl/Cmd + Shift + 9` cycles the whole chat Auto → RTL → LTR.
+
+Docs: README.md (fa/ar/ur available), vscode-extension/README.md,
+desktop-app/README.md, CHANGELOG.md. Full version of this file: llms.txt.
