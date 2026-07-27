@@ -4,7 +4,7 @@
 > read correctly in AI chats, with the Vazirmatn font. 100% local — no servers,
 > no telemetry.
 
-Version: 1.2.0
+Version: 1.3.0
 License: MIT · Repository: https://github.com/mahdigh99/rtl-for-claude
 
 Four surfaces, all reversible:
