@@ -77,6 +77,8 @@ Codex پینل کے لیے اس کا الگ patcher استعمال کریں:
 bash vscode-extension-codex/apply-rtl.sh
 ```
 
+یا کچھ بھی ڈاؤن لوڈ کیے بغیر: `npx rtl-for-claude` ← آپشن **3**۔
+
 پھر **Developer: Reload Window** چلائیں۔ Codex کی ہر اپڈیٹ کے بعد یہ کمانڈ
 دوبارہ چلائیں۔ اصل شکل واپس لانے کے لیے:
 `bash vscode-extension-codex/apply-rtl.sh --remove`۔
@@ -87,18 +89,23 @@ Marketplace میں پروڈکٹ کا نام اب **Codex** ہے، مگر انس�
 
 **Claude Desktop ایپ — macOS**
 
-[یہ ریپازٹری ڈاؤن لوڈ کریں](https://github.com/mahdigh99/rtl-for-claude/archive/refs/heads/main.zip)،
-اَن زپ کریں اور چلائیں:
+Terminal کھولیں اور یہ ایک لائن پیسٹ کریں:
 
 ```bash
-bash desktop-app/apply-rtl.sh --install
+npx rtl-for-claude
 ```
 
-یہ `~/Applications/Claude-RTL.app` پر ایک **الگ پیچ شدہ کاپی** بناتا ہے — آپ کی
-اصل Claude.app کو ہاتھ تک نہیں لگاتا — بس **Claude-RTL** کھولیں اور کام ختم۔
-Claude Desktop کی ہر اپڈیٹ کے بعد یہ کمانڈ دوبارہ چلائیں؛ `--remove` کاپی کو
-حذف کر دیتا ہے۔ Node.js اور Xcode Command Line Tools درکار ہیں۔ مکمل گائیڈ:
-[desktop-app/README.md](desktop-app/README.md)۔
+ایک مینو کھلے گا؛ **Claude Desktop** منتخب کریں۔ یہ
+`~/Applications/Claude-RTL.app` پر ایک **الگ پیچ شدہ کاپی** بناتا ہے — آپ کی اصل
+Claude.app کو ہاتھ تک نہیں لگاتا — بس **Claude-RTL** کھولیں اور کام ختم۔ Claude
+Desktop کی ہر اپڈیٹ کے بعد دوبارہ چلائیں، اور
+`npx rtl-for-claude --desktop --remove` کاپی کو حذف کر دیتا ہے۔
+
+<sub>اسکرپٹ پہلے خود دیکھنا چاہتے ہیں؟ ریپازٹری ڈاؤن لوڈ کر کے
+`bash desktop-app/apply-rtl.sh --install` چلائیں — وہی پیچر، وہی نتیجہ۔ دونوں کو
+Node.js اور Xcode Command Line Tools درکار ہیں؛ `npx rtl-for-claude --doctor` ان
+کی جانچ کر دیتا ہے۔ مکمل گائیڈ:
+[desktop-app/README.md](desktop-app/README.md)۔</sub>
 
 ## 🎛️ اپنی مرضی کے مطابق
 

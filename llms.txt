@@ -55,14 +55,24 @@ Repository: https://github.com/mahdigh99/rtl-for-claude
 
 ## Install
 
+The one-command path (no download, no repository checkout) covers the Claude
+Desktop app and both VS Code chats:
+
+    npx rtl-for-claude          # interactive menu
+    npx rtl-for-claude --doctor # check prerequisites, change nothing
+
+Per surface:
+
 - Browser: load `browser-extension/` unpacked (`chrome://extensions` →
   Developer mode → Load unpacked), or `about:debugging` on Firefox.
 - VS Code: install "RTL for Claude" from the Marketplace / Open VSX, then run
   **Developer: Reload Window**. Script alternative: `bash
   vscode-extension/apply-rtl.sh` (`apply-rtl.ps1` on Windows).
 - Codex: `bash vscode-extension-codex/apply-rtl.sh`, then reload the window.
-- Claude Desktop (macOS): `bash desktop-app/apply-rtl.sh --install`, then launch
-  `~/Applications/Claude-RTL.app`. Re-run it after every Claude update.
+- Claude Desktop (macOS): `npx rtl-for-claude --desktop` (or, from a checkout,
+  `bash desktop-app/apply-rtl.sh --install`), then launch
+  `~/Applications/Claude-RTL.app`. Re-run it after every Claude update. Needs
+  Node.js and the Xcode Command Line Tools (`codesign`).
 
 Every installer is reversible: `--remove` (or **Restore original chat** /
 turning the extension off) puts the original files back byte-for-byte.

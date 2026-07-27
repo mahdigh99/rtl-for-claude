@@ -9,48 +9,55 @@ that remembers your choice.
 > patched copy* at `~/Applications/Claude-RTL.app` and touches only that copy.
 > Uninstalling is deleting it.
 
-## Install
+## Install — the short way
 
-**1. Get the files.** Download the repository —
-[Code → Download ZIP](https://github.com/mahdigh99/rtl-for-claude/archive/refs/heads/main.zip)
-— and unzip it, or:
+Open Terminal and paste one line:
 
 ```bash
-git clone https://github.com/mahdigh99/rtl-for-claude.git
+npx rtl-for-claude
 ```
 
-**2. Check the two requirements.** Both are one-time:
-
-```bash
-node --version      # Node.js — https://nodejs.org (any recent version)
-xcode-select -p     # Xcode Command Line Tools; if missing: xcode-select --install
-```
-
-**3. Run the installer** from inside the downloaded folder:
-
-```bash
-cd rtl-for-claude/desktop-app
-bash apply-rtl.sh --install
-```
-
-It takes a minute or two. When it finishes, open **Claude-RTL** from your
-`~/Applications` folder (or Spotlight). Your Persian, Arabic and Urdu chats now
-read right-to-left.
+A menu appears; choose **Claude Desktop app**. It checks the requirements,
+tells you exactly what it will do, and asks before changing anything. When it
+finishes, open **Claude-RTL** from your `~/Applications` folder (or Spotlight).
+Your Persian, Arabic and Urdu chats now read right-to-left.
 
 The first launch shows a macOS prompt or two (notifications, and possibly a
 keychain prompt) — that is expected, see [Good to know](#good-to-know).
 
+Requirements, both one-time: **Node.js** (nodejs.org — it is what provides the
+`npx` command) and the **Xcode Command Line Tools** (`xcode-select --install`),
+because macOS will not launch a modified app that has not been re-signed.
+`npx rtl-for-claude --doctor` checks for both and prints the exact fix.
+
+## Install — the transparent way
+
+Prefer to read the script before running it? Nothing is hidden: it is the same
+patcher, just run by hand.
+
+```bash
+git clone https://github.com/mahdigh99/rtl-for-claude.git
+cd rtl-for-claude/desktop-app
+bash apply-rtl.sh --install
+```
+
+(Or download the repository as a ZIP from
+[Code → Download ZIP](https://github.com/mahdigh99/rtl-for-claude/archive/refs/heads/main.zip)
+and unzip it.)
+
 ## Everyday use
 
 ```bash
-bash apply-rtl.sh --list      # is it installed? is it still healthy?
-bash apply-rtl.sh --remove    # delete the patched copy, leaving Claude.app alone
-bash apply-rtl.sh --install   # re-run after each Claude Desktop update
+npx rtl-for-claude --status              # is it installed? is it still healthy?
+npx rtl-for-claude --desktop --remove    # delete the copy, leaving Claude.app alone
+npx rtl-for-claude --desktop --yes       # re-install without the questions
 ```
 
-**After every Claude Desktop update, re-run `--install`.** Anthropic's updater
+…or, from a checkout: `bash apply-rtl.sh --list | --remove | --install`.
+
+**After every Claude Desktop update, re-install.** Anthropic's updater
 only updates the original app, so the patched copy stays on the old version
-until you rebuild it. `--list` tells you when that has happened.
+until you rebuild it. `--status` tells you when that has happened.
 
 Inside the app: click the floating button (bottom-right) or press
 `Cmd + Shift + 9` to pin the whole conversation to RTL or LTR, or back to
@@ -74,10 +81,12 @@ automatic.
 
 ## Something went wrong?
 
+- **Missing prerequisites** — `npx rtl-for-claude --doctor` names each one with
+  its fix and changes nothing.
 - **"Claude.app not found"** — the installer expects the app at
   `/Applications/Claude.app`. Move it there (not `~/Applications`) and re-run.
-- **The patched copy won't start** — run `bash apply-rtl.sh --list`; if it
-  reports a problem, `--remove` then `--install` rebuilds it from scratch.
+- **The patched copy won't start** — run `npx rtl-for-claude --status`; if it
+  reports a problem, remove and install again to rebuild it from scratch.
 - **Anything unexpected** — `--remove` always returns you to a clean system,
   because the original app was never touched. Then please
   [open an issue](https://github.com/mahdigh99/rtl-for-claude/issues).

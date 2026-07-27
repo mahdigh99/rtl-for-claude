@@ -3,6 +3,22 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension + Claude Desktop patcher).
 This project follows [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+
+- **Install with one command: `npx rtl-for-claude`.** No download, no unzip, no
+  `cd` — a menu asks what you want (the Claude Desktop app, the Claude Code
+  chat, the Codex chat, or the VS Code extension), tells you exactly what it
+  will change, and asks before doing it. `--doctor` checks the prerequisites and
+  names the fix for each missing one — including the Xcode Command Line Tools,
+  which it now checks *before* copying a 500 MB app bundle instead of failing
+  half-way. Everything is still installable by hand from a checkout: the
+  installer runs the very same scripts.
+- **A double-click installer for macOS** in the release assets, for people who
+  would rather not open a terminal at all. (First launch needs right-click →
+  Open, because macOS quarantines every downloaded script.)
+
 ## [1.3.0] — 2026-07-27
 
 The biggest release since 1.0: **Claude Desktop on macOS**, **any AI chat site

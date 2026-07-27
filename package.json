@@ -1,0 +1,56 @@
+{
+  "name": "rtl-for-claude",
+  "version": "1.3.0",
+  "description": "Right-to-left text (Persian, Arabic, Urdu, Hebrew …) and the Vazirmatn font in the Claude Desktop app and the Claude Code / Codex chats. One command, 100% local, fully reversible.",
+  "keywords": [
+    "rtl",
+    "right-to-left",
+    "persian",
+    "farsi",
+    "arabic",
+    "urdu",
+    "hebrew",
+    "claude",
+    "claude code",
+    "codex",
+    "vazirmatn",
+    "electron",
+    "asar",
+    "patcher"
+  ],
+  "homepage": "https://github.com/mahdigh99/rtl-for-claude#readme",
+  "bugs": {
+    "url": "https://github.com/mahdigh99/rtl-for-claude/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahdigh99/rtl-for-claude.git"
+  },
+  "license": "MIT",
+  "author": "Mahdi Ghorbanian",
+  "type": "commonjs",
+  "bin": {
+    "rtl-for-claude": "cli/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node cli/tests/cli.test.js"
+  },
+  "files": [
+    "cli/index.js",
+    "cli/doctor.js",
+    "desktop-app/apply-rtl.sh",
+    "desktop-app/assets/",
+    "vscode-extension/apply-rtl.sh",
+    "vscode-extension/apply-rtl.ps1",
+    "vscode-extension/assets/",
+    "vscode-extension-codex/apply-rtl.sh",
+    "vscode-extension-codex/assets/",
+    "browser-extension/src/rtl-math.js",
+    "browser-extension/src/rtl-engine.js",
+    "browser-extension/fonts/Vazirmatn-VariableFont_wght.woff2",
+    "browser-extension/fonts/OFL.txt"
+  ]
+}

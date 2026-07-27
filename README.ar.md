@@ -77,6 +77,8 @@
 bash vscode-extension-codex/apply-rtl.sh
 ```
 
+أو بدون تنزيل أي شيء: `npx rtl-for-claude` ← الخيار **3**.
+
 ثم نفّذ **Developer: Reload Window**. أعد تشغيل الأمر بعد كل تحديث لـ Codex.
 لاستعادة المظهر الأصلي: `bash vscode-extension-codex/apply-rtl.sh --remove`.
 
@@ -86,18 +88,21 @@ bash vscode-extension-codex/apply-rtl.sh
 
 **تطبيق Claude Desktop — macOS**
 
-[نزّل هذا المستودع](https://github.com/mahdigh99/rtl-for-claude/archive/refs/heads/main.zip)،
-فُكّ الضغط عنه ثم نفّذ:
+افتح Terminal والصق هذا السطر الواحد:
 
 ```bash
-bash desktop-app/apply-rtl.sh --install
+npx rtl-for-claude
 ```
 
-يبني **نسخة مُرقَّعة منفصلة** في `~/Applications/Claude-RTL.app` — ولا يُعدّل
-تطبيق Claude.app الأصلي إطلاقًا — فما عليك سوى فتح **Claude-RTL**. أعد تنفيذ
-الأمر بعد كل تحديث لـ Claude Desktop، و`--remove` يحذف النسخة. يحتاج Node.js
-وأدوات Xcode لسطر الأوامر. الدليل الكامل:
-[desktop-app/README.md](desktop-app/README.md).
+تظهر قائمة؛ اختر **Claude Desktop**. يبني **نسخة مُرقَّعة منفصلة** في
+`~/Applications/Claude-RTL.app` — ولا يُعدّل تطبيق Claude.app الأصلي إطلاقًا —
+فما عليك سوى فتح **Claude-RTL**. أعد تنفيذه بعد كل تحديث لـ Claude Desktop،
+و`npx rtl-for-claude --desktop --remove` يحذف النسخة.
+
+<sub>تفضّل قراءة السكربت قبل تشغيله؟ نزّل المستودع ونفّذ
+`bash desktop-app/apply-rtl.sh --install` — نفس المُرقِّع ونفس النتيجة. كلاهما
+يحتاج Node.js وأدوات Xcode لسطر الأوامر، و`npx rtl-for-claude --doctor` يتحقق
+منهما. الدليل الكامل: [desktop-app/README.md](desktop-app/README.md).</sub>
 
 ## 🎛️ على ذوقك أنت
 

@@ -77,6 +77,8 @@ The Codex extension uses a separate webview patcher. From this repository, run:
 bash vscode-extension-codex/apply-rtl.sh
 ```
 
+Or, without downloading anything: `npx rtl-for-claude` → option **3**.
+
 Then run **Developer: Reload Window**. Re-run the patcher after Codex updates.
 To restore the original Codex webview, run
 `bash vscode-extension-codex/apply-rtl.sh --remove`. The Marketplace product is
@@ -86,18 +88,21 @@ named Codex, although its installed extension identifier remains
 
 **Claude Desktop app — macOS**
 
-[Download this repository](https://github.com/mahdigh99/rtl-for-claude/archive/refs/heads/main.zip),
-unzip it, and run:
+Open Terminal and paste this one line:
 
 ```bash
-bash desktop-app/apply-rtl.sh --install
+npx rtl-for-claude
 ```
 
-It builds a **patched copy** at `~/Applications/Claude-RTL.app` — your original
-Claude.app is never modified — so just open **Claude-RTL** and you're done.
-Re-run the command after each Claude Desktop update; `--remove` deletes the
-copy. Needs Node.js + Xcode Command Line Tools. Full guide:
-[desktop-app/README.md](desktop-app/README.md).
+A menu appears; pick **Claude Desktop**. It builds a **patched copy** at
+`~/Applications/Claude-RTL.app` — your original Claude.app is never modified —
+so just open **Claude-RTL** and you're done. Re-run it after each Claude Desktop
+update, and `npx rtl-for-claude --desktop --remove` deletes the copy.
+
+<sub>Prefer to read the script before running it? Download the repository and run
+`bash desktop-app/apply-rtl.sh --install` — same patcher, same result. Both need
+Node.js and Xcode Command Line Tools; `npx rtl-for-claude --doctor` checks for
+them. Full guide: [desktop-app/README.md](desktop-app/README.md).</sub>
 
 ## 🎛️ Make it yours
 

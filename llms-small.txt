@@ -24,6 +24,10 @@ terminals, links, inline code and rendered math stay left-to-right; raw LaTeX
 and bare arithmetic are isolated so they don't mirror; tables flip as a whole
 with counter-flow cells keeping their own direction.
 
+Install without downloading anything: `npx rtl-for-claude` (interactive menu;
+covers the desktop app and both VS Code chats). Everything is also installable
+by hand from a checkout — same scripts.
+
 Shortcut: `Ctrl/Cmd + Shift + 9` cycles the whole chat Auto → RTL → LTR.
 
 Docs: README.md (fa/ar/ur available), vscode-extension/README.md,

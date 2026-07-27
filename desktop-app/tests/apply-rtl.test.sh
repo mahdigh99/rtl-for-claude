@@ -20,70 +20,14 @@ trap 'rm -rf "$test_root"' EXIT
 
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
-# Same algorithm as the patcher (offset 12 → 4-byte LE length → SHA256 of the
-# UTF-8 JSON header string) — kept as an independent inline copy on purpose.
-hash_of() {
-  node -e '
-    const fs = require("fs"), crypto = require("crypto");
-    const fd = fs.openSync(process.argv[1], "r");
-    const sz = Buffer.alloc(16);
-    fs.readSync(fd, sz, 0, 16, 0);
-    const len = sz.readUInt32LE(12);
-    const hdr = Buffer.alloc(len);
-    fs.readSync(fd, hdr, 0, len, 16);
-    fs.closeSync(fd);
-    process.stdout.write(crypto.createHash("sha256").update(hdr).digest("hex"));
-  ' "$1"
-}
-
-# --- synthetic app source ----------------------------------------------------
-appsrc="$test_root/appsrc"
-mkdir -p "$appsrc/.vite/build"
-printf '{"name":"fixture","main":".vite/build/index.pre.js"}\n' > "$appsrc/package.json"
-# The MAIN entry also mentions claude.ai — the patcher must exclude it by the
-# package.json "main" basename, never by content (black-screen guard).
-printf 'console.log("main boot", "https://claude.ai");\n' > "$appsrc/.vite/build/index.pre.js"
-# The preload; single line WITHOUT a trailing newline, like real vite bundles.
-printf 'const A="https://claude.ai";const B="https://preview.claude.ai";console.log(A,B);' > "$appsrc/.vite/build/mainView.js"
-printf 'console.log("worker");\n' > "$appsrc/.vite/build/other.js"
-# A Node MCP host that MENTIONS claude.ai but has no DOM: it must be skipped by
-# name, not treated as a rival preload candidate (Windows patcher's issue #14).
-printf 'console.log("mcp host for https://claude.ai");\n' > "$appsrc/.vite/build/directMcpHost.js"
-# Native-module stand-ins that must stay OUTSIDE the packed asar (unpack glob).
-printf 'FAKE-NATIVE-NODE\n'   > "$appsrc/.vite/build/addon.node"
-printf 'FAKE-DYLIB\n'         > "$appsrc/.vite/build/lib.dylib"
-printf 'FAKE-SPAWN-HELPER\n'  > "$appsrc/spawn-helper"
-
-SOURCE_APP="$test_root/Claude.app"
-build_fixture() { # (re)pack appsrc into a fresh synthetic Claude.app
-  rm -rf "$SOURCE_APP" "$test_root/pack.asar" "$test_root/pack.asar.unpacked"
-  mkdir -p "$SOURCE_APP/Contents/MacOS" "$SOURCE_APP/Contents/Resources"
-  cp /bin/ls "$SOURCE_APP/Contents/MacOS/Claude" # a real Mach-O so codesign works
-  npx --yes @electron/asar pack "$appsrc" "$test_root/pack.asar" --unpack "{*.node,*.dylib,spawn-helper}"
-  cp "$test_root/pack.asar" "$SOURCE_APP/Contents/Resources/app.asar"
-  cp -R "$test_root/pack.asar.unpacked" "$SOURCE_APP/Contents/Resources/app.asar.unpacked"
-  local h; h="$(hash_of "$SOURCE_APP/Contents/Resources/app.asar")"
-  cat > "$SOURCE_APP/Contents/Info.plist" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>CFBundleExecutable</key><string>Claude</string>
-	<key>CFBundleIdentifier</key><string>com.test.claude.fixture</string>
-	<key>CFBundlePackageType</key><string>APPL</string>
-	<key>CFBundleShortVersionString</key><string>9.9.9</string>
-	<key>ElectronAsarIntegrity</key>
-	<dict>
-		<key>Resources/app.asar</key>
-		<dict>
-			<key>algorithm</key><string>SHA256</string>
-			<key>hash</key><string>$h</string>
-		</dict>
-	</dict>
-</dict>
-</plist>
-EOF
-}
+# The synthetic .app + asar fixture lives in fixture.sh so cli/tests can build
+# the identical thing without duplicating it (or reaching for the real app).
+. "$SCRIPT_DIR/fixture.sh"
+rtlx_fixture_init "$test_root"
+appsrc="$FIXTURE_APPSRC"
+SOURCE_APP="$FIXTURE_APP"
+build_fixture() { rtlx_build_fixture; }
+hash_of() { rtlx_hash_of "$1"; }
 
 build_fixture
 cp "$SOURCE_APP/Contents/Resources/app.asar" "$test_root/original.asar"

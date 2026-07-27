@@ -5,3 +5,7 @@ dist/
 .DS_Store
 node_modules/
 *.rtl-backup
+
+# npm auth is written to a temp file outside the repo, but never let one land here
+.npmrc
+*.tgz

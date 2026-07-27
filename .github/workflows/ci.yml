@@ -56,6 +56,12 @@ jobs:
       - name: Codex patcher lifecycle
         run: bash vscode-extension-codex/tests/apply-rtl.test.sh
 
+      - name: npx installer (packs the tarball and installs it)
+        # Runs against the packed artifact, not the working tree, so a broken
+        # `files` list fails here instead of for the first user. Its desktop
+        # section needs PlistBuddy/codesign and skips itself on this runner.
+        run: node cli/tests/cli.test.js
+
       - name: Shell syntax (bash -n on every script)
         run: |
           status=0
