@@ -11,6 +11,7 @@
 ![Chrome](https://img.shields.io/badge/Chrome-supported-success)
 ![Firefox](https://img.shields.io/badge/Firefox-supported-success)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Claude%20Code-success)
+![macOS](https://img.shields.io/badge/macOS-Claude%20Desktop-success)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20local-8b5cf6)
 
 [English](README.md) · **فارسی** · [العربية](README.ar.md) · [اردو](README.ur.md)
@@ -83,6 +84,21 @@ bash vscode-extension-codex/apply-rtl.sh
 نام محصول در Marketplace اکنون **Codex** است، ولی شناسهٔ فنی پوشهٔ نصب‌شده
 همچنان `openai.chatgpt` باقی مانده است. راهنمای کامل:
 [vscode-extension-codex/README.md](vscode-extension-codex/README.md).
+
+**اپلیکیشن Claude Desktop — macOS**
+
+[این مخزن را دانلود کن](https://github.com/mahdigh99/rtl-for-claude/archive/refs/heads/main.zip)،
+از حالت فشرده در بیاور و اجرا کن:
+
+```bash
+bash desktop-app/apply-rtl.sh --install
+```
+
+یک **نسخهٔ وصله‌خوردهٔ جداگانه** در `~/Applications/Claude-RTL.app` می‌سازد —
+Claude.app اصلی‌ات دست‌نخورده می‌ماند — کافی است **Claude-RTL** را باز کنی.
+بعد از هر به‌روزرسانی Claude Desktop دوباره اجرایش کن؛ `--remove` هم نسخهٔ کپی
+را پاک می‌کند. به Node.js و Xcode Command Line Tools نیاز دارد. راهنمای کامل:
+[desktop-app/README.md](desktop-app/README.md).
 
 ## 🎛️ به سلیقه‌ی خودت
 

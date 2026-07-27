@@ -11,6 +11,7 @@ Automatic RTL + the gorgeous Vazirmatn font. Zero setup.
 ![Chrome](https://img.shields.io/badge/Chrome-supported-success)
 ![Firefox](https://img.shields.io/badge/Firefox-supported-success)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Claude%20Code-success)
+![macOS](https://img.shields.io/badge/macOS-Claude%20Desktop-success)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20local-8b5cf6)
 
 **English** · [فارسی](README.fa.md) · [العربية](README.ar.md) · [اردو](README.ur.md)
@@ -82,6 +83,21 @@ To restore the original Codex webview, run
 named Codex, although its installed extension identifier remains
 `openai.chatgpt`. Full guide:
 [vscode-extension-codex/README.md](vscode-extension-codex/README.md).
+
+**Claude Desktop app — macOS**
+
+[Download this repository](https://github.com/mahdigh99/rtl-for-claude/archive/refs/heads/main.zip),
+unzip it, and run:
+
+```bash
+bash desktop-app/apply-rtl.sh --install
+```
+
+It builds a **patched copy** at `~/Applications/Claude-RTL.app` — your original
+Claude.app is never modified — so just open **Claude-RTL** and you're done.
+Re-run the command after each Claude Desktop update; `--remove` deletes the
+copy. Needs Node.js + Xcode Command Line Tools. Full guide:
+[desktop-app/README.md](desktop-app/README.md).
 
 ## 🎛️ Make it yours
 
