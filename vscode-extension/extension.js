@@ -12,6 +12,11 @@
  *
  * All file mutation lives in patcher.js (zero vscode imports: cross-process
  * lock + atomic writes + size guard); this file is the vscode-facing shell.
+ *
+ * Optionally (rtlForClaude.codex.enabled) the same treatment covers the OpenAI
+ * Codex webview too: assets + a marked block in its webview/index.html, kept
+ * byte-compatible with vscode-extension-codex/apply-rtl.sh — codex.js holds
+ * that file logic under the same lock/atomic-write discipline.
  * ========================================================================== */
 const vscode = require("vscode");
 const fs = require("fs");
@@ -19,6 +24,7 @@ const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
 const patcher = require("./patcher");
+const codex = require("./codex");
 
 const FONT_DEST = patcher.FONT_DEST;
 const PANEL_ID = "rtlForClaude.panel";
@@ -45,14 +51,16 @@ const FONT_STACKS = {
 // scripts, which have no runtime API) still gets patched.
 function extensionRoots() {
   const roots = patcher.defaultExtensionRoots(os.homedir());
-  try {
-    const ext = vscode.extensions.getExtension("anthropic.claude-code");
-    if (ext && ext.extensionPath) {
-      // <extensions-dir>/anthropic.claude-code-<ver>  →  <extensions-dir>
-      const dir = path.dirname(ext.extensionPath);
-      if (roots.indexOf(dir) === -1) roots.push(dir);
-    }
-  } catch (e) {}
+  for (const id of ["anthropic.claude-code", "openai.chatgpt"]) {
+    try {
+      const ext = vscode.extensions.getExtension(id);
+      if (ext && ext.extensionPath) {
+        // <extensions-dir>/<publisher>.<name>-<ver>  →  <extensions-dir>
+        const dir = path.dirname(ext.extensionPath);
+        if (roots.indexOf(dir) === -1) roots.push(dir);
+      }
+    } catch (e) {}
+  }
   return roots;
 }
 
@@ -60,6 +68,23 @@ function extensionRoots() {
 // running until the editor's own reload — both need the patch).
 function claudeWebviewDirs() {
   return patcher.findWebviewDirs(extensionRoots());
+}
+
+// Codex (openai.chatgpt) — covered only when the user opted in.
+function codexEnabled() {
+  return vscode.workspace.getConfiguration("rtlForClaude").get("codex.enabled", false);
+}
+function codexWebviewDirs() {
+  return codex.findCodexWebviewDirs(extensionRoots());
+}
+// Only patches the EXTENSION wrote carry an rtlx-fp fingerprint; one left by
+// the standalone apply-rtl.sh does not. Never auto-remove what isn't ours.
+function extensionOwnsCodexPatch(dir) {
+  try {
+    return fs.readFileSync(path.join(dir, "index.html"), "utf8").indexOf("rtlx-fp:") !== -1;
+  } catch (e) {
+    return false;
+  }
 }
 
 // --- settings --------------------------------------------------------------
@@ -151,6 +176,44 @@ function buildJs(context, s) {
   return { js, fp };
 }
 
+// The Codex driver reads the same window.__RTLX_SETTINGS shape (minus the
+// Claude-only keys) and turns it into the CSS variables its stylesheet uses,
+// so the user's font/detection settings carry over to the Codex chat too.
+function buildCodexSources(context, s) {
+  const settingsJson = JSON.stringify({
+    enabled: true,
+    fontStack: s.fontStack,
+    fontScale: s.fontScale,
+    lineHeight: s.lineHeight,
+    letterSpacing: s.letterSpacing,
+    mode: s.mode,
+    threshold: s.threshold,
+    applyToInput: s.applyToInput,
+    keepCodeLTR: s.keepCodeLTR,
+  });
+  const paths = {
+    stylesPath: asset(context, path.join("codex", "styles.css")),
+    mathPath: asset(context, path.join("codex", "rtl-math.js")),
+    driverPath: asset(context, path.join("codex", "driver.js")),
+    fontPath: asset(context, path.join("codex", "vazirmatn-codex.woff2")),
+  };
+  const sizes = [paths.stylesPath, paths.mathPath, paths.driverPath]
+    .map((p) => {
+      try {
+        return fs.statSync(p).size;
+      } catch (e) {
+        return 0;
+      }
+    })
+    .join(",");
+  const fp = crypto
+    .createHash("sha1")
+    .update(settingsJson + "|" + sizes)
+    .digest("hex")
+    .slice(0, 12);
+  return Object.assign({ settingsJson, fp }, paths);
+}
+
 // --- apply / remove --------------------------------------------------------
 
 /**
@@ -164,7 +227,8 @@ async function apply(context, opts) {
   const s = engineSettings();
   if (!s.enabled) return { ok: false, wrote: 0, reason: "disabled" };
   const dirs = claudeWebviewDirs();
-  if (!dirs.length) {
+  const codexDirs = codexEnabled() ? codexWebviewDirs() : [];
+  if (!dirs.length && !codexDirs.length) {
     if (!opts.silent)
       vscode.window.showWarningMessage("RTL for Claude: the Claude Code extension was not found.");
     return { ok: false, wrote: 0, reason: "no-claude" };
@@ -193,6 +257,23 @@ async function apply(context, opts) {
       problems.push(dir + ": " + e.message);
     }
   }
+  if (codexDirs.length) {
+    const cs = buildCodexSources(context, s);
+    for (const dir of codexDirs) {
+      if (!opts.force && codex.isPatched(dir) && codex.isCurrent(dir, cs.fp)) {
+        okCount++;
+        continue;
+      }
+      try {
+        const r = await codex.patchCodexDir(dir, cs);
+        if (r.ok) okCount++;
+        if (r.wrote) wrote++;
+        problems.push(...r.warnings);
+      } catch (e) {
+        problems.push(dir + ": " + e.message);
+      }
+    }
+  }
   if (problems.length && !opts.silent)
     vscode.window.showWarningMessage("RTL for Claude: " + problems[0]);
   if (!okCount) {
@@ -211,6 +292,26 @@ async function remove() {
   for (const dir of claudeWebviewDirs()) {
     try {
       n += await patcher.removeWebviewDir(dir);
+    } catch (e) {}
+  }
+  for (const dir of codexWebviewDirs()) {
+    // With the opt-in off, only lift a patch we made ourselves — never one the
+    // user applied deliberately with the standalone script.
+    if (!codexEnabled() && !extensionOwnsCodexPatch(dir)) continue;
+    try {
+      n += await codex.removeCodexDir(dir);
+    } catch (e) {}
+  }
+  return n;
+}
+
+/** Lift only OUR Codex patch (used when rtlForClaude.codex.enabled turns off). */
+async function removeCodexOnly() {
+  let n = 0;
+  for (const dir of codexWebviewDirs()) {
+    if (!extensionOwnsCodexPatch(dir)) continue;
+    try {
+      n += await codex.removeCodexDir(dir);
     } catch (e) {}
   }
   return n;
@@ -238,7 +339,11 @@ function startWatching(context) {
   for (const root of extensionRoots()) {
     try {
       const w = fs.watch(root, { persistent: false }, (_event, filename) => {
-        if (filename && String(filename).indexOf(patcher.CLAUDE_CODE_PREFIX) === 0)
+        const name = filename ? String(filename) : "";
+        if (
+          name.indexOf(patcher.CLAUDE_CODE_PREFIX) === 0 ||
+          (name.indexOf(codex.CODEX_PREFIX) === 0 && codexEnabled())
+        )
           scheduleReinject(context);
       });
       w.on("error", () => {});
@@ -455,6 +560,16 @@ function activate(context) {
       if (!e.affectsConfiguration("rtlForClaude")) return;
       updateStatusBar();
       panel.post();
+      // Codex opt-in switched OFF: lift only OUR Codex patch, right now. This
+      // lives here (on the transition) and never on plain startup, so a patch
+      // applied deliberately with the standalone script survives an extension
+      // that was simply never opted in.
+      if (e.affectsConfiguration("rtlForClaude.codex.enabled") && !codexEnabled()) {
+        removeCodexOnly().then((n) => {
+          if (n > 0) offerReload("RTL removed from the Codex chat — reload to see it.");
+        });
+        return;
+      }
       // Only re-patch the webview when a setting that actually affects it
       // changed — toggling the sidebar / status-bar visibility must not prompt
       // a reload.
@@ -468,6 +583,8 @@ function activate(context) {
         // Placement is baked into the injected driver settings, so it needs a
         // re-patch too — `language` deliberately is not: it only skins the panel.
         "rtlForClaude.togglePlacement",
+        // Turning Codex coverage ON is a patch too (OFF returns above).
+        "rtlForClaude.codex",
       ];
       if (webviewKeys.some((k) => e.affectsConfiguration(k))) scheduleReapply(context);
     })
@@ -482,11 +599,41 @@ function activate(context) {
       startWatching(context);
       if ((await apply(context, { silent: true })).wrote > 0)
         offerReload("RTL for Claude is ready — reload to apply it to the chat.");
+      maybeOfferCodex(context);
     } else if (!s.enabled) {
-      if (claudeWebviewDirs().some((d) => patcher.isPatched(d)) && (await remove()) > 0)
+      const anyPatched =
+        claudeWebviewDirs().some((d) => patcher.isPatched(d)) ||
+        codexWebviewDirs().some((d) => extensionOwnsCodexPatch(d));
+      if (anyPatched && (await remove()) > 0)
         offerReload("RTL for Claude is off — reload to restore the original chat.");
     }
   }, 0);
+}
+
+// One-time offer: Codex is installed, the user never decided, the extension is
+// on. "Yes" flips the setting (the config listener then patches); "No" writes
+// an explicit false so we never ask again; dismissing just marks it offered.
+function maybeOfferCodex(context) {
+  try {
+    if (!context.globalState || context.globalState.get("rtlxCodexOffered")) return;
+    const c = vscode.workspace.getConfiguration("rtlForClaude");
+    const insp = (typeof c.inspect === "function" && c.inspect("codex.enabled")) || {};
+    if (insp.globalValue !== undefined || insp.workspaceValue !== undefined) return;
+    if (!codexWebviewDirs().length) return;
+    context.globalState.update("rtlxCodexOffered", true);
+    vscode.window
+      .showInformationMessage(
+        "RTL for Claude: the Codex extension is installed too — apply RTL to the Codex chat as well?",
+        "Yes",
+        "No"
+      )
+      .then((ans) => {
+        if (ans === "Yes")
+          c.update("codex.enabled", true, vscode.ConfigurationTarget.Global);
+        else if (ans === "No")
+          c.update("codex.enabled", false, vscode.ConfigurationTarget.Global);
+      });
+  } catch (e) {}
 }
 
 function deactivate() {

@@ -25,6 +25,7 @@
   "config.applyToInput": "Also flip the message box to RTL as you type.",
   "config.showMessageToggles": "Show a small toggle on each message to override its direction by hand.",
   "config.keepCodeLeftToRight": "Keep code blocks, diffs and terminals left-to-right.",
+  "config.codex.enabled": "Also apply RTL to the **Codex** chat (the `openai.chatgpt` extension), with the same font and detection settings, and re-apply it automatically after Codex updates. When Codex is installed, the extension offers this once by itself.",
   "config.togglePlacement": "Where the whole-chat direction button lives.",
   "config.togglePlacement.toolbar": "Dock the Auto/RTL/LTR button in the panel's top toolbar, next to New session / Session history.",
   "config.togglePlacement.floating": "Show it as a floating pill in the bottom corner of the chat.",

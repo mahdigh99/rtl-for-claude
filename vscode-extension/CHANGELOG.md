@@ -3,6 +3,16 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Added
+- **Codex support, opt-in.** One setting — `rtlForClaude.codex.enabled` — also
+  applies RTL to the OpenAI **Codex** chat, with your font and detection
+  settings, and re-applies it automatically after every Codex update. The
+  extension offers it once, by itself, when Codex is installed. Fully
+  reversible; a patch applied with the standalone script is never touched
+  unless you opt in.
+
 ## [1.3.0] — 2026-07-27
 
 ### Added

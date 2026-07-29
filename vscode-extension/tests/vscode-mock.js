@@ -39,6 +39,10 @@ const workspace = {
         cfgStore[section + "." + key] = value;
         fireConfigChange(section + "." + key);
       },
+      inspect(key) {
+        const k = section + "." + key;
+        return k in cfgStore ? { globalValue: cfgStore[k] } : {};
+      },
     };
   },
   onDidChangeConfiguration(fn) {

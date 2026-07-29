@@ -8,6 +8,7 @@
 Automatic RTL + the gorgeous Vazirmatn font. Zero setup.
 
 ![License](https://img.shields.io/badge/License-MIT-3b82f6)
+![npm](https://img.shields.io/npm/v/rtl-for-claude)
 ![Chrome](https://img.shields.io/badge/Chrome-supported-success)
 ![Firefox](https://img.shields.io/badge/Firefox-supported-success)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Claude%20Code-success)
@@ -15,6 +16,8 @@ Automatic RTL + the gorgeous Vazirmatn font. Zero setup.
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20local-8b5cf6)
 
 **English** · [فارسی](README.fa.md) · [العربية](README.ar.md) · [اردو](README.ur.md)
+
+<img src="docs/demo.gif" width="640" alt="RTL for Claude in action" />
 
 </div>
 
@@ -45,7 +48,37 @@ Automatic RTL + the gorgeous Vazirmatn font. Zero setup.
 
 ## 🚀 Install
 
-Pick what you need — each part is its own self-contained download.
+Two ways in — both end up in the same place.
+
+### The quick way — one command
+
+```bash
+npx rtl-for-claude
+```
+
+- **The menu**: arrow keys — pick the Claude Desktop app, the Claude Code or
+  Codex chat, or the VS Code extension.
+- **Undo**: run it again and pick the remove option; everything goes back.
+
+Don't want a terminal at all? Two stand-ins:
+
+- 🖱️ **Double-click**: grab **Install RTL for Claude.command** from
+  [Releases](https://github.com/mahdigh99/rtl-for-claude/releases/latest) and
+  open it (first time: right-click → **Open**).
+- 🤖 **Via AI**: hand the repo URL to Claude Code and ask it to set this up —
+  [CLAUDE.md](CLAUDE.md) tells it how.
+
+<sub>Needs [Node.js](https://nodejs.org) 18+. Two exceptions: the browser
+extension can't be installed from this menu (it's just below), and on Windows
+take the hands-on way for now.</sub>
+
+---
+
+### The hands-on way — everything under your control
+
+No magic here: every part is either a script you can open and read before you
+run it, or a folder you load into the browser yourself. If you'd rather not
+run anything sight unseen, this is your path.
 
 **Browser — Chrome / Edge / Brave**
 1. Download the [`browser-extension`](browser-extension) folder.
@@ -66,43 +99,43 @@ Or install the **`.vsix`** — download `rtl-for-claude-vscode-*.vsix` from
 [Releases](https://github.com/mahdigh99/rtl-for-claude/releases) and run
 **Extensions → `…` → Install from VSIX…**.
 
-No-install alternative: `bash vscode-extension/apply-rtl.sh`. Full guide:
+Don't want the extension at all? `bash vscode-extension/apply-rtl.sh` patches
+the chat directly. Full guide:
 [vscode-extension/README.md](vscode-extension/README.md).
 
 **VS Code — Codex**
 
-The Codex extension uses a separate webview patcher. From this repository, run:
+The easiest way is the **RTL for Claude** extension above: when Codex is
+installed it offers — once — to cover the Codex chat too, then re-applies
+itself after every Codex update (the `rtlForClaude.codex.enabled` setting).
+
+The hands-on way is its standalone patcher:
 
 ```bash
 bash vscode-extension-codex/apply-rtl.sh
 ```
 
-Or, without downloading anything: `npx rtl-for-claude` → option **3**.
-
-Then run **Developer: Reload Window**. Re-run the patcher after Codex updates.
-To restore the original Codex webview, run
-`bash vscode-extension-codex/apply-rtl.sh --remove`. The Marketplace product is
-named Codex, although its installed extension identifier remains
-`openai.chatgpt`. Full guide:
+Then run **Developer: Reload Window**; re-run it yourself after each Codex
+update, and `--remove` restores the original look.
+The Marketplace product is now named Codex, but the installed folder still
+uses the old `openai.chatgpt` identifier — that's expected. Full guide:
 [vscode-extension-codex/README.md](vscode-extension-codex/README.md).
 
-**Claude Desktop app — macOS**
+**Claude Desktop app — macOS only**
 
-Open Terminal and paste this one line:
+Download the repository, read the script if you like, then run it:
 
 ```bash
-npx rtl-for-claude
+bash desktop-app/apply-rtl.sh --install
 ```
 
-A menu appears; pick **Claude Desktop**. It builds a **patched copy** at
-`~/Applications/Claude-RTL.app` — your original Claude.app is never modified —
-so just open **Claude-RTL** and you're done. Re-run it after each Claude Desktop
-update, and `npx rtl-for-claude --desktop --remove` deletes the copy.
+It never touches your original Claude.app: it builds a separate patched copy
+at `~/Applications/Claude-RTL.app`, and from then on that's the one you open.
+Re-run it after each Claude Desktop update; `--remove` deletes the copy.
 
-<sub>Prefer to read the script before running it? Download the repository and run
-`bash desktop-app/apply-rtl.sh --install` — same patcher, same result. Both need
-Node.js and Xcode Command Line Tools; `npx rtl-for-claude --doctor` checks for
-them. Full guide: [desktop-app/README.md](desktop-app/README.md).</sub>
+<sub>Needs Node.js and the Xcode Command Line Tools — `npx rtl-for-claude --doctor`
+tells you if anything is missing. Full guide:
+[desktop-app/README.md](desktop-app/README.md).</sub>
 
 ## 🎛️ Make it yours
 
@@ -110,14 +143,41 @@ Click the toolbar icon to fine-tune detection sensitivity, font (bundled or one
 installed on your computer), text size, line spacing, the floating direction
 button, the popup's language, and which sites it runs on — including your own.
 
+## ❓ FAQ
+
+**Claude updated and things look broken again. Now what?**
+The browser extension isn't affected by updates at all, and the VS Code
+extension re-applies itself — to both chats, if you turned Codex coverage on.
+Only the hand-run patches — the desktop app, and the chats if you patched
+them without the extension — need one more run of the same command.
+
+**What exactly does it touch?**
+No original files. The desktop app is patched as a separate copy (Claude-RTL),
+and the VS Code patches back up every file they change (`*.rtl-backup`) before
+touching it. Everything is offline, on your machine.
+
+**Windows or Linux?**
+The browser extension and the VS Code extension work everywhere; the desktop
+patch is macOS-only for now.
+
+**How do I undo everything?**
+Run `npx rtl-for-claude` and pick the remove option, or pass `--remove` to any
+of the scripts; the extensions uninstall like any other extension.
+
 ## 🔒 Privacy
 
 No servers. No analytics. Nothing ever leaves your browser.
 
-## ❤️ Credits
+## ⭐ If it helped
 
-Powered by the open-source [Vazirmatn](https://github.com/rastikerdar/vazirmatn)
-font by Saber Rastikerdar (SIL OFL). Code under the [MIT License](LICENSE).
+A star helps more people find this. Found a bug?
+[Open an issue](https://github.com/mahdigh99/rtl-for-claude/issues).
+
+## ❤️ In memory of Saber
+
+The typeface is [Vazirmatn](https://github.com/rastikerdar/vazirmatn) — in
+memory of the late Saber Rastikerdar, who left his fonts free for everyone.
+Code under the [MIT License](LICENSE).
 
 ---
 

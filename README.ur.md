@@ -8,6 +8,7 @@
 خودکار RTL اور خوبصورت Vazirmatn فونٹ — کسی سیٹنگ کی جھنجھٹ کے بغیر۔
 
 ![License](https://img.shields.io/badge/License-MIT-3b82f6)
+![npm](https://img.shields.io/npm/v/rtl-for-claude)
 ![Chrome](https://img.shields.io/badge/Chrome-supported-success)
 ![Firefox](https://img.shields.io/badge/Firefox-supported-success)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Claude%20Code-success)
@@ -16,13 +17,15 @@
 
 [English](README.md) · [فارسی](README.fa.md) · [العربية](README.ar.md) · **اردو**
 
+<img src="docs/demo.gif" width="640" alt="RTL for Claude عمل میں" />
+
 </div>
 
 ---
 
 <div dir="rtl">
 
-Claude کے جواب کمال کے ہوتے ہیں، مگر اردو لکھتے ہی وہ بائیں طرف کھسک کر بکھر جاتے ہیں۔ یہ ایکسٹینشن ایک کلک میں سب کچھ سیدھا کر دیتی ہے اور باقی ہر جگہ بالکل بے ضرر رہتی ہے۔
+یوں تو Claude کے جواب کمال کے ہوتے ہیں، مگر اردو لکھتے ہی وہ بائیں طرف کھسک کر بکھر جاتے ہیں۔ یہ ایکسٹینشن ایک کلک میں سب کچھ سیدھا کر دیتی ہے اور باقی ہر جگہ بالکل بے ضرر رہتی ہے۔
 
 | 😖 پہلے کا حال | 😍 اب کا مزہ |
 | --- | --- |
@@ -43,7 +46,38 @@ Claude کے جواب کمال کے ہوتے ہیں، مگر اردو لکھتے 
 
 ## 🚀 انسٹال کریں
 
-جو چاہیے وہ چن لیں — ہر حصہ اپنے آپ میں مکمل اور الگ ڈاؤن لوڈ ہے۔
+دو راستے ہیں؛ نتیجہ ایک ہی ہے۔
+
+### تیز طریقہ — بس ایک کمانڈ
+
+```bash
+npx rtl-for-claude
+```
+
+- **مینو**: ایرو کیز سے چنیں — Claude Desktop ایپ، Claude Code یا Codex کی
+  چیٹ، یا خود VS Code ایکسٹینشن۔
+- **واپسی**: دوبارہ چلائیں اور ہٹانے کا آپشن چن لیں؛ سب کچھ جوں کا توں لوٹ
+  آتا ہے۔
+
+ٹرمینل بالکل نہیں چاہیے؟ دو متبادل:
+
+- 🖱️ **ڈبل کلک**: [Releases](https://github.com/mahdigh99/rtl-for-claude/releases/latest)
+  سے **Install RTL for Claude.command** فائل لے کر کھولیں (پہلی بار: رائٹ
+  کلک، پھر **Open**)۔
+- 🤖 **بذریعہ AI**: ریپو کا لنک Claude Code کو دے کر انسٹال کا کہہ دیں —
+  [CLAUDE.md](CLAUDE.md) میں ہدایات موجود ہیں۔
+
+<sub>صرف [Node.js](https://nodejs.org) 18 یا نیا چاہیے۔ دو استثنا: براؤزر
+ایکسٹینشن اس مینو سے انسٹال نہیں ہوتی (وہ بالکل نیچے ہے)، اور Windows پر فی
+الحال دستی طریقہ اپنائیں۔</sub>
+
+---
+
+### دستی طریقہ — سب کچھ آپ کے ہاتھ میں
+
+کوئی جادو نہیں: ہر حصہ یا تو ایک اسکرپٹ ہے جسے آپ چلانے سے پہلے کھول کر پڑھ
+سکتے ہیں، یا ایک فولڈر جو آپ خود براؤزر میں لوڈ کرتے ہیں۔ اَن دیکھی چیز
+چلانا پسند نہیں؟ تو یہی راستہ آپ کا ہے۔
 
 **Browser — Chrome / Edge / Brave**
 
@@ -58,7 +92,7 @@ Claude کے جواب کمال کے ہوتے ہیں، مگر اردو لکھتے 
 
 **VS Code — Claude Code**
 
-**Marketplace** سے: **«RTL for Claude»** سرچ کریں (یا
+سیدھا **Marketplace** سے: **«RTL for Claude»** سرچ کریں (یا
 [لسٹنگ](https://marketplace.visualstudio.com/items?itemName=mahdigh99.rtl-for-claude)
 کھولیں)، **Install** دبائیں، پھر **Developer: Reload Window** چلائیں۔
 
@@ -66,58 +100,74 @@ Claude کے جواب کمال کے ہوتے ہیں، مگر اردو لکھتے 
 `rtl-for-claude-vscode-*.vsix` ڈاؤن لوڈ کریں اور VS Code میں
 **Extensions ← `…` ← Install from VSIX…** کریں۔
 
-بغیر انسٹال: `bash vscode-extension/apply-rtl.sh`۔ مکمل گائیڈ:
+ایکسٹینشن بھی نہیں چاہیے؟ `bash vscode-extension/apply-rtl.sh` سیدھا چیٹ کو
+پیچ کر دیتا ہے۔ مکمل گائیڈ:
 [vscode-extension/README.md](vscode-extension/README.md)۔
 
 **VS Code — Codex**
 
-Codex پینل کے لیے اس کا الگ patcher استعمال کریں:
+سب سے آسان راستہ اوپر والی **RTL for Claude** ایکسٹینشن ہے: Codex انسٹال ہو
+تو ایک بار خود پوچھتی ہے کہ Codex چیٹ بھی سنبھال لے، اور پھر Codex کی ہر
+اپڈیٹ کے بعد خود دوبارہ لاگو ہو جاتی ہے (سیٹنگ `rtlForClaude.codex.enabled`)۔
+
+دستی راستہ اس کا الگ پیچر ہے:
 
 ```bash
 bash vscode-extension-codex/apply-rtl.sh
 ```
 
-یا کچھ بھی ڈاؤن لوڈ کیے بغیر: `npx rtl-for-claude` ← آپشن **3**۔
+پھر **Developer: Reload Window** چلائیں؛ یہ والا Codex کی ہر اپڈیٹ کے بعد آپ
+کو خود دوبارہ چلانا ہو گا، اور `--remove` اصل شکل واپس لے آتا ہے۔
 
-پھر **Developer: Reload Window** چلائیں۔ Codex کی ہر اپڈیٹ کے بعد یہ کمانڈ
-دوبارہ چلائیں۔ اصل شکل واپس لانے کے لیے:
-`bash vscode-extension-codex/apply-rtl.sh --remove`۔
-
-Marketplace میں پروڈکٹ کا نام اب **Codex** ہے، مگر انسٹال شدہ فولڈر کا
-تکنیکی شناختی نام اب بھی `openai.chatgpt` ہی ہے۔ مکمل گائیڈ:
+اب Marketplace میں اس پروڈکٹ کا نام **Codex** ہے، مگر انسٹال شدہ فولڈر پر
+اب بھی پرانا شناختی نام `openai.chatgpt` ہی ہے — یہ معمول کی بات ہے۔ مکمل گائیڈ:
 [vscode-extension-codex/README.md](vscode-extension-codex/README.md)۔
 
-**Claude Desktop ایپ — macOS**
+**ایپ Claude Desktop — صرف macOS**
 
-Terminal کھولیں اور یہ ایک لائن پیسٹ کریں:
+ریپازٹری ڈاؤن لوڈ کریں، چاہیں تو پہلے اسکرپٹ پڑھ لیں، پھر چلائیں:
 
 ```bash
-npx rtl-for-claude
+bash desktop-app/apply-rtl.sh --install
 ```
 
-ایک مینو کھلے گا؛ **Claude Desktop** منتخب کریں۔ یہ
-`~/Applications/Claude-RTL.app` پر ایک **الگ پیچ شدہ کاپی** بناتا ہے — آپ کی اصل
-Claude.app کو ہاتھ تک نہیں لگاتا — بس **Claude-RTL** کھولیں اور کام ختم۔ Claude
-Desktop کی ہر اپڈیٹ کے بعد دوبارہ چلائیں، اور
-`npx rtl-for-claude --desktop --remove` کاپی کو حذف کر دیتا ہے۔
+یہ آپ کی اصل Claude.app کو ہاتھ نہیں لگاتا؛ `~/Applications/Claude-RTL.app`
+پر ایک الگ پیچ شدہ کاپی بناتا ہے، اور آئندہ آپ وہی کھولیں گے۔ Claude Desktop
+کی ہر اپڈیٹ کے بعد دوبارہ چلائیں؛ `--remove` کاپی حذف کر دیتا ہے۔
 
-<sub>اسکرپٹ پہلے خود دیکھنا چاہتے ہیں؟ ریپازٹری ڈاؤن لوڈ کر کے
-`bash desktop-app/apply-rtl.sh --install` چلائیں — وہی پیچر، وہی نتیجہ۔ دونوں کو
-Node.js اور Xcode Command Line Tools درکار ہیں؛ `npx rtl-for-claude --doctor` ان
-کی جانچ کر دیتا ہے۔ مکمل گائیڈ:
+<sub>اس کے لیے Node.js اور Xcode Command Line Tools درکار ہیں —
+`npx rtl-for-claude --doctor` بتا دیتا ہے کہ کچھ کم تو نہیں۔ مکمل گائیڈ:
 [desktop-app/README.md](desktop-app/README.md)۔</sub>
 
 ## 🎛️ اپنی مرضی کے مطابق
 
 ٹول بار کے آئیکن پر کلک کریں اور سب کچھ خود طے کریں — پہچان کی حساسیت، فونٹ (شامل شدہ یا آپ کے کمپیوٹر پر نصب)، متن کا سائز، سطروں کا فاصلہ، تیرتا سمت بٹن، پاپ اپ کی زبان، اور یہ بھی کہ کن کن سائٹس پر یہ چلے — بشمول آپ کی اپنی سائٹس۔
 
+## ❓ عام سوالات
+
+**اگر Claude اپڈیٹ ہو گیا اور سب پھر بگڑ گیا تو؟**
+براؤزر ایکسٹینشن پر اپڈیٹ کا اثر ہی نہیں پڑتا، اور VS Code ایکسٹینشن خود کو دوبارہ لاگو کر لیتی ہے — دونوں چیٹس پر، اگر Codex کوریج آن کی ہو۔ صرف ہاتھ سے چلائے پیچ — ڈیسک ٹاپ ایپ، اور چیٹس اگر بغیر ایکسٹینشن پیچ کی ہوں — وہی ایک کمانڈ دوبارہ مانگتے ہیں۔
+
+**یہ بالکل کس چیز کو چھیڑتا ہے؟**
+کسی اصل فائل کو نہیں۔ ڈیسک ٹاپ ایپ الگ کاپی (Claude-RTL) کے طور پر پیچ ہوتی ہے، اور VS Code کے پیچ ہر فائل کو بدلنے سے پہلے اس کا بیک اپ (`*.rtl-backup`) بناتے ہیں۔ سب کچھ آف لائن، آپ کے اپنے سسٹم پر۔
+
+**کیا Windows یا Linux پر بھی چلتا ہے؟**
+براؤزر ایکسٹینشن اور VS Code ایکسٹینشن ہر جگہ چلتی ہیں؛ ڈیسک ٹاپ پیچ فی الحال صرف macOS کے لیے ہے۔
+
+**سب کچھ واپس کیسے کروں؟**
+کمانڈ `npx rtl-for-claude` چلا کر ہٹانے کا آپشن چنیں، یا کسی بھی اسکرپٹ کو `--remove` دیں۔ ایکسٹینشنز عام ایکسٹینشنز کی طرح ان انسٹال ہو جاتی ہیں۔
+
 ## 🔒 رازداری
 
 سو فیصد آپ کے ڈیوائس پر، نہ کوئی سرور نہ کوئی ٹریکنگ — کچھ بھی آپ کے براؤزر سے باہر نہیں جاتا۔
 
-## ❤️ شکریہ
+## ⭐ کام آیا ہو تو
 
-یہ سب اوپن سورس [Vazirmatn](https://github.com/rastikerdar/vazirmatn) فونٹ کے دم سے ممکن ہوا، جسے صابر راستی کردار نے بنایا (لائسنس SIL OFL)۔ کوڈ [MIT License](LICENSE) کے تحت ہے۔
+ایک ستارہ دے دیں تاکہ یہ اوزار اوروں تک بھی پہنچے۔ کوئی مسئلہ ہو تو [Issue کھولیں](https://github.com/mahdigh99/rtl-for-claude/issues)۔
+
+## ❤️ صابر کی یاد میں
+
+اس پروجیکٹ کا فونٹ [Vazirmatn](https://github.com/rastikerdar/vazirmatn) ہے — مرحوم صابر راستی کردار کی یاد میں، جنہوں نے اپنے فونٹ سب کے لیے مفت چھوڑے۔ کوڈ [MIT License](LICENSE) کے تحت ہے۔
 
 </div>
 

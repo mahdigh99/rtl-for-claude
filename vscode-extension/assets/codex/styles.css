@@ -1,0 +1,186 @@
+/* fallow-ignore-file unused-file -- copied into the Codex webview by apply-rtl.sh */
+/* ============================================================================
+ * RTL for Codex (VS Code) — webview styles.
+ *
+ * Loaded by a patched webview/index.html. Direction classes are stamped by
+ * driver.js so we do not have to chase scoped CSS-module hashes in the CSS.
+ * ========================================================================== */
+
+@font-face {
+  font-family: "Vazirmatn RTLX";
+  src: url("./vazirmatn-codex.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* --- global force ---------------------------------------------------------- */
+html[data-rtlx-force-all="rtl"],
+html[data-rtlx-force-all="rtl"] body {
+  direction: rtl !important;
+  text-align: right !important;
+}
+html[data-rtlx-force-all="ltr"],
+html[data-rtlx-force-all="ltr"] body {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* --- RTL prose surfaces ---------------------------------------------------- */
+.rtlx-rtl,
+.rtlx-rtl.text-size-chat.min-w-0.font-medium.break-words.text-token-foreground,
+.rtlx-rtl.text-size-chat.mt-2.whitespace-pre-wrap.text-token-foreground,
+[data-rtlx-user-rtl] .text-size-chat.min-w-0.font-medium.break-words.text-token-foreground,
+[data-rtlx-user-rtl] .text-size-chat.mt-2.whitespace-pre-wrap.text-token-foreground,
+[data-rtlx-force-all="rtl"] .text-size-chat.min-w-0.font-medium.break-words.text-token-foreground,
+[data-rtlx-force-all="rtl"] .text-size-chat.mt-2.whitespace-pre-wrap.text-token-foreground,
+.rtlx-rtl[class*="_markdownContent_"],
+.rtlx-rtl[class*="_paragraph_"],
+.rtlx-rtl[class*="_markdownBlock_"],
+.rtlx-rtl[class*="_heading_"],
+.rtlx-rtl[class*="_list_"],
+.rtlx-rtl[class*="_listItem_"],
+.rtlx-rtl[class*="_blockquote_"],
+.rtlx-rtl[class*="_tableCell_"],
+.rtlx-rtl[class*="_tableHeaderCell_"],
+[data-rtlx-force-all="rtl"] [class*="_markdownContent_"],
+[data-rtlx-force-all="rtl"] [class*="_paragraph_"],
+[data-rtlx-force-all="rtl"] [class*="_markdownBlock_"],
+[data-rtlx-force-all="rtl"] [class*="_heading_"],
+[data-rtlx-force-all="rtl"] [class*="_list_"],
+[data-rtlx-force-all="rtl"] [class*="_listItem_"],
+[data-rtlx-force-all="rtl"] [class*="_blockquote_"],
+[data-rtlx-force-all="rtl"] [class*="_tableCell_"],
+[data-rtlx-force-all="rtl"] [class*="_tableHeaderCell_"] {
+  direction: rtl !important;
+  text-align: right !important;
+  /* Pin the base direction to `direction` rather than the first strong
+     character. Codex only uses `unicode-bidi: plaintext` on file-path and diff
+     spans today, but a future bundle applying it to prose would otherwise make
+     a paragraph that opens with an English word resolve to an LTR base. */
+  unicode-bidi: isolate !important;
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+  line-height: var(--rtlx-line-height, 1.85) !important;
+  /* The `0` fallback keeps this valid on a CSS-only patch, where no driver ever
+     sets the variable — an unset var() would invalidate the whole rule. */
+  letter-spacing: var(--rtlx-letter-spacing, 0) !important;
+  font-size: calc(1em * var(--rtlx-font-scale, 1)) !important;
+}
+
+/* Avoid flipping media-only paragraphs. */
+[class*="_mediaParagraph_"],
+[class*="mediaParagraph"] {
+  direction: inherit !important;
+  text-align: left !important;
+}
+
+/* --- nested inline runs inside RTL blocks ----------------------------------
+   Also excludes descendants of pre/code (`pre *` …) so syntax-highlight
+   spans inside code blocks keep their monospace font. */
+.rtlx-rtl :where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)),
+[data-rtlx-force-all="rtl"] :is([class*="_markdownContent_"], [class*="_paragraph_"], [class*="_markdownBlock_"], [class*="_heading_"], [class*="_list_"], [class*="_listItem_"], [class*="_blockquote_"], [class*="_tableCell_"], [class*="_tableHeaderCell_"]) :where(:not(pre, code, kbd, samp, pre *, code *, kbd *, samp *)) {
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+}
+
+/* --- code / preformatted stays LTR ---------------------------------------- */
+.rtlx-rtl pre,
+.rtlx-rtl code,
+.rtlx-rtl kbd,
+.rtlx-rtl samp,
+.rtlx-rtl pre *,
+.rtlx-rtl code *,
+[data-rtlx-force-all="rtl"] pre,
+[data-rtlx-force-all="rtl"] code,
+[data-rtlx-force-all="rtl"] kbd,
+[data-rtlx-force-all="rtl"] samp,
+[data-rtlx-force-all="rtl"] pre *,
+[data-rtlx-force-all="rtl"] code *,
+.rtlx-code-ltr pre,
+.rtlx-code-ltr code,
+.rtlx-code-ltr kbd,
+.rtlx-code-ltr samp {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+
+/* --- links / inline code / numbers inside RTL prose keep directionality ---- */
+.rtlx-rtl a,
+.rtlx-rtl code,
+.rtlx-rtl time,
+.rtlx-rtl tt,
+[data-rtlx-force-all="rtl"] :is(p, li, td, blockquote) :is(a, code, time, tt) {
+  unicode-bidi: isolate;
+}
+
+/* --- math islands -----------------------------------------------------------
+   The driver wraps raw LaTeX and bare arithmetic found inside RTL prose in
+   [data-rtlx-island] spans (with matching inline styles); this rule is the
+   durable copy so app CSS can never re-mirror "2 + 3 = 5". */
+[data-rtlx-island] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+}
+
+/* --- tables -----------------------------------------------------------------
+   A Persian-column table is flipped as a whole by the driver via
+   data-rtlx-table; counter-flow cells get their own direction back via
+   data-rtlx-cell. Specificity note: the two-attribute variants (0,2,0) match
+   the per-block .rtlx-rtl[class*=…] rules (0,2,0) but come later in source
+   order, so a cell wins back its direction inside an RTL turn; the driver
+   stands down entirely while the global pin is active. */
+table[data-rtlx-table="rtl"] {
+  direction: rtl !important;
+}
+[data-rtlx-assistant-rtl] [data-rtlx-cell="ltr"],
+[data-rtlx-cell="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+[data-rtlx-assistant-rtl] [data-rtlx-cell="rtl"],
+[data-rtlx-cell="rtl"] {
+  direction: rtl !important;
+  text-align: right !important;
+  unicode-bidi: isolate !important;
+}
+
+/* --- composer input ------------------------------------------------------- */
+textarea[data-autoresize].rtlx-input-rtl {
+  direction: rtl !important;
+  text-align: right !important;
+  font-family: var(--rtlx-font-stack, "Vazirmatn RTLX", "Vazirmatn", var(--vscode-font-family), Tahoma, sans-serif) !important;
+}
+textarea[data-autoresize].rtlx-input-ltr {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* --- global floating toggle ------------------------------------------------ */
+#rtlx-global {
+  position: fixed;
+  bottom: 14px;
+  inset-inline-end: 16px;
+  z-index: 2147483600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 11px;
+  font: 600 11px/1 system-ui, -apple-system, Segoe UI, sans-serif;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-button-background, #d97757);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.55;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  transition: opacity 0.15s ease, transform 0.1s ease;
+  direction: ltr;
+}
+#rtlx-global:hover { opacity: 1; }
+#rtlx-global:active { transform: scale(0.96); }
+#rtlx-global[data-state="auto"] {
+  background: var(--vscode-button-secondaryBackground, rgba(128, 128, 128, 0.5));
+  color: var(--vscode-button-secondaryForeground, inherit);
+}

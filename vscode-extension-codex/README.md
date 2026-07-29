@@ -14,6 +14,24 @@ The Codex chat is a sandboxed webview, so this patcher edits the extension's own
 
 ## How to use
 
+**The easiest way** — the
+[RTL for Claude](https://marketplace.visualstudio.com/items?itemName=mahdigh99.rtl-for-claude)
+extension covers Codex too: it offers this once when Codex is installed
+(setting: `rtlForClaude.codex.enabled`) and re-applies itself after every
+Codex update — nothing to re-run by hand.
+
+**The short way** — nothing to download:
+
+```bash
+npx rtl-for-claude
+```
+
+Pick **Codex chat in VS Code** from the menu (or run
+`npx rtl-for-claude --codex`), then run **`Developer: Reload Window`** in VS
+Code. To undo it: `npx rtl-for-claude --codex --remove`.
+
+**From a checkout**, if you'd rather run the script yourself:
+
 1. Open a terminal in this folder:
 
    ```bash
@@ -50,7 +68,8 @@ Every Codex extension update replaces the patched files. Re-run:
 ./apply-rtl.sh
 ```
 
-after each update.
+after each update. (Not needed when the RTL for Claude extension manages
+Codex — it re-applies automatically.)
 
 ## Files
 

@@ -20,6 +20,7 @@ in the Claude Code chat.** Automatic, per-paragraph right-to-left + the gorgeous
 - 🎛️ **Per-message ⇌ override** and a **global Auto / RTL / LTR** toggle.
 - 🧩 **Never breaks code** — code blocks, diffs and terminals stay left-to-right.
 - 🔁 **Survives updates** — re-applies itself automatically after every Claude Code update.
+- 🤝 **Codex too, if you want** — one setting also covers the OpenAI **Codex** chat with the same fonts and settings, and re-applies it after Codex updates. Offered once, automatically, when Codex is installed.
 - 🔒 **100% local** — no servers, no tracking.
 
 ## Install
@@ -29,6 +30,22 @@ in the Claude Code chat.** Automatic, per-paragraph right-to-left + the gorgeous
 
 That's it — the Claude chat now reads right-to-left. Fine-tune everything from the
 **RTL for Claude** panel in the left sidebar, or the quick menu on the status bar.
+
+## Without installing the extension
+
+Rather not install anything from the Marketplace? The same patch is available
+two other ways — the quick one:
+
+```bash
+npx rtl-for-claude --claude-code
+```
+
+or entirely by hand, from a clone of the
+[repository](https://github.com/mahdigh99/rtl-for-claude), so you can read
+what runs before it runs: `bash vscode-extension/apply-rtl.sh`.
+
+The extension is still the better option — it re-applies itself after every
+Claude Code update, while these patches have to be re-run by hand.
 
 ## Settings
 
@@ -47,6 +64,7 @@ That's it — the Claude chat now reads right-to-left. Fine-tune everything from
 | `rtlForClaude.applyToInput` | `true` | Flip the message box as you type. |
 | `rtlForClaude.showMessageToggles` | `true` | Per-message ⇌ override button. |
 | `rtlForClaude.keepCodeLeftToRight` | `true` | Keep code / diffs / terminals LTR. |
+| `rtlForClaude.codex.enabled` | `false` | Also patch the **Codex** chat (`openai.chatgpt`) and keep it patched across its updates. |
 | `rtlForClaude.togglePlacement` | `toolbar` | Whole-chat direction button: `toolbar`, `floating` or `hidden`. |
 | `rtlForClaude.showInActivityBar` | `true` | Show the panel (big icon) in the left Activity Bar. |
 | `rtlForClaude.showStatusBar` | `true` | Show the small RTL item in the status bar. |
@@ -89,6 +107,11 @@ compiling your settings into the styles and the RTL engine it injects. Everythin
 runs **locally** inside the webview — no remote code, no telemetry. Each original
 file is backed up (`*.rtl-backup`) and fully restorable. Works with VS Code,
 Cursor and Windsurf.
+
+With `rtlForClaude.codex.enabled`, the same treatment covers the **Codex**
+extension: a marked, fully reversible block in its `webview/index.html` loads
+the same RTL engine. A patch applied with the standalone script is recognised
+and never removed unless you opt in.
 
 ## Privacy
 

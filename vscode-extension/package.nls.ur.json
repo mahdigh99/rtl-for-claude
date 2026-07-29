@@ -25,6 +25,7 @@
   "config.applyToInput": "لکھتے وقت پیغام کا خانہ بھی RTL کر دیں۔",
   "config.showMessageToggles": "ہر پیغام پر ایک چھوٹا بٹن دکھائیں تاکہ اس کی سمت ہاتھ سے بدلی جا سکے۔",
   "config.keepCodeLeftToRight": "کوڈ بلاکس، ڈِف اور ٹرمینل بائیں سے دائیں رکھیں۔",
+  "config.codex.enabled": "**Codex** چیٹ (`openai.chatgpt` ایکسٹینشن) پر بھی RTL لاگو کریں — انہی فونٹ اور شناخت کی سیٹنگز کے ساتھ، اور Codex کی ہر اپڈیٹ کے بعد خود بخود دوبارہ لاگو ہو گا۔ Codex انسٹال ہو تو ایکسٹینشن ایک بار خود یہ پیشکش کرتی ہے۔",
   "config.togglePlacement": "پوری چیٹ کی سمت والا بٹن کہاں ہو۔",
   "config.togglePlacement.toolbar": "خودکار/RTL/LTR بٹن پینل کی اوپر والی پٹی میں، نئی سیشن / سیشن ہسٹری کے ساتھ۔",
   "config.togglePlacement.floating": "چیٹ کے نچلے کونے میں تیرتے بٹن کے طور پر دکھائیں۔",

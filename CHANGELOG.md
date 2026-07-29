@@ -20,6 +20,12 @@ This project follows [Semantic Versioning](https://semver.org).
 - **A double-click installer for macOS** in the release assets, for people who
   would rather not open a terminal at all. (First launch needs right-click →
   Open, because macOS quarantines every downloaded script.)
+- **The VS Code extension can now cover the Codex chat too.** Turn on
+  `rtlForClaude.codex.enabled` — the extension offers it once, by itself, when
+  Codex is installed. The Codex chat gets your fonts and settings, and — unlike
+  the hand-run patch — it re-applies automatically after every Codex update.
+  Fully reversible, and a patch you applied with the standalone script is never
+  touched unless you opt in.
 
 ## [1.3.0] — 2026-07-27
 

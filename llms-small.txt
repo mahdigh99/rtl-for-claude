@@ -13,7 +13,8 @@ Four surfaces, all reversible:
   Gemini, plus any chat site you add yourself from the popup.
 - VS Code extension for the Claude Code chat (Marketplace + Open VSX,
   `mahdigh99.rtl-for-claude`); also makes VS Code's Markdown preview RTL.
-- Patcher for the Codex VS Code extension (`vscode-extension-codex/apply-rtl.sh`).
+- Codex chat: covered by the VS Code extension (`rtlForClaude.codex.enabled`)
+  or by the standalone patcher (`vscode-extension-codex/apply-rtl.sh`).
 - Patcher for the Claude Desktop app on macOS — it patches a COPY at
   `~/Applications/Claude-RTL.app` and never touches the original.
 

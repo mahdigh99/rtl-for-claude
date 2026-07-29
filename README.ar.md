@@ -8,6 +8,7 @@
 محاذاة من اليمين إلى اليسار تشتغل وحدها، وخط Vazirmatn الأنيق — من دون أي إعداد.
 
 ![License](https://img.shields.io/badge/License-MIT-3b82f6)
+![npm](https://img.shields.io/npm/v/rtl-for-claude)
 ![Chrome](https://img.shields.io/badge/Chrome-supported-success)
 ![Firefox](https://img.shields.io/badge/Firefox-supported-success)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Claude%20Code-success)
@@ -15,6 +16,8 @@
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20local-8b5cf6)
 
 [English](README.md) · [فارسی](README.fa.md) · **العربية** · [اردو](README.ur.md)
+
+<img src="docs/demo.gif" width="640" alt="RTL for Claude أثناء العمل" />
 
 </div>
 
@@ -43,7 +46,36 @@
 
 ## 🚀 التثبيت
 
-اختر ما يناسبك — كل جزء يُنزَّل لوحده.
+أمامك طريقان، والنتيجة واحدة.
+
+### الطريقة السريعة — أمر واحد يكفي
+
+```bash
+npx rtl-for-claude
+```
+
+- **القائمة**: تنقّل بالأسهم واختر — تطبيق Claude Desktop، أو محادثة
+  Claude Code أو Codex، أو إضافة VS Code نفسها.
+- **التراجع**: شغّله من جديد واختر الإزالة، فيعود كل شيء كما كان.
+
+لا تريد الطرفية أصلًا؟ بديلان:
+
+- 🖱️ **نقرة مزدوجة**: نزّل **Install RTL for Claude.command** من
+  [Releases](https://github.com/mahdigh99/rtl-for-claude/releases/latest)
+  وافتحه (أول مرة: بالزر الأيمن ثم **Open**).
+- 🤖 **عبر الذكاء الاصطناعي**: أعطِ رابط المستودع لـ Claude Code واطلب منه
+  التثبيت — [CLAUDE.md](CLAUDE.md) يشرح له الطريقة.
+
+<sub>لا يحتاج سوى [Node.js](https://nodejs.org) الإصدار 18 فأحدث. استثناءان:
+إضافة المتصفح لا تُثبَّت من هذه القائمة (تجدها أدناه مباشرة)، وعلى Windows
+اسلك الطريقة اليدوية حاليًا.</sub>
+
+---
+
+### الطريقة اليدوية — كل شيء بين يديك
+
+لا سحر هنا: كل جزء إما سكربت يمكنك فتحه وقراءته سطرًا سطرًا قبل تشغيله، وإما
+مجلد تحمّله في المتصفح بنفسك. لا تحب تشغيل ما لم تقرأه؟ هذه طريقتك.
 
 **المتصفّح — Chrome / Edge / Brave**
 
@@ -66,55 +98,74 @@
 [Releases](https://github.com/mahdigh99/rtl-for-claude/releases)، ثم في VS Code
 نفّذ **Extensions ← `…` ← Install from VSIX…**.
 
-بدون تثبيت: `bash vscode-extension/apply-rtl.sh`. الدليل الكامل:
+لا تريد الإضافة أصلًا؟ `bash vscode-extension/apply-rtl.sh` يرقّع المحادثة
+مباشرة. الدليل الكامل:
 [vscode-extension/README.md](vscode-extension/README.md).
 
 **VS Code — Codex**
 
-للوحة Codex استخدم أداة الترقيع المستقلة الخاصة بها:
+أسهل طريقة هي إضافة **RTL for Claude** أعلاه: حين تكون Codex مثبّتة تعرض —
+مرة واحدة — أن تغطي محادثة Codex أيضًا، ثم تعيد تطبيق نفسها بعد كل تحديث لها
+(الإعداد `rtlForClaude.codex.enabled`).
+
+والطريقة اليدوية هي مُرقِّعها المستقل:
 
 ```bash
 bash vscode-extension-codex/apply-rtl.sh
 ```
 
-أو بدون تنزيل أي شيء: `npx rtl-for-claude` ← الخيار **3**.
+ثم نفّذ **Developer: Reload Window**؛ هذا عليك إعادة تشغيله بنفسك بعد كل
+تحديث لـ Codex، و`--remove` يستعيد المظهر الأصلي.
 
-ثم نفّذ **Developer: Reload Window**. أعد تشغيل الأمر بعد كل تحديث لـ Codex.
-لاستعادة المظهر الأصلي: `bash vscode-extension-codex/apply-rtl.sh --remove`.
-
-اسم المنتج في الـ Marketplace الآن هو **Codex**، لكن المعرّف التقني لمجلد
-التثبيت ما يزال `openai.chatgpt`. الدليل الكامل:
+اسم المنتج في الـ Marketplace الآن **Codex**، لكن مجلد التثبيت ما يزال يحمل
+المعرّف القديم `openai.chatgpt` — وهذا متوقَّع. الدليل الكامل:
 [vscode-extension-codex/README.md](vscode-extension-codex/README.md).
 
-**تطبيق Claude Desktop — macOS**
+**تطبيق Claude Desktop — macOS فقط**
 
-افتح Terminal والصق هذا السطر الواحد:
+نزّل المستودع، واقرأ السكربت إن شئت، ثم نفّذه:
 
 ```bash
-npx rtl-for-claude
+bash desktop-app/apply-rtl.sh --install
 ```
 
-تظهر قائمة؛ اختر **Claude Desktop**. يبني **نسخة مُرقَّعة منفصلة** في
-`~/Applications/Claude-RTL.app` — ولا يُعدّل تطبيق Claude.app الأصلي إطلاقًا —
-فما عليك سوى فتح **Claude-RTL**. أعد تنفيذه بعد كل تحديث لـ Claude Desktop،
-و`npx rtl-for-claude --desktop --remove` يحذف النسخة.
+لا يمسّ تطبيق Claude.app الأصلي أبدًا؛ بل يبني نسخة مُرقَّعة منفصلة في
+`~/Applications/Claude-RTL.app`، وهي التي تفتحها من الآن فصاعدًا. أعد تنفيذه
+بعد كل تحديث لـ Claude Desktop؛ و`--remove` يحذف النسخة.
 
-<sub>تفضّل قراءة السكربت قبل تشغيله؟ نزّل المستودع ونفّذ
-`bash desktop-app/apply-rtl.sh --install` — نفس المُرقِّع ونفس النتيجة. كلاهما
-يحتاج Node.js وأدوات Xcode لسطر الأوامر، و`npx rtl-for-claude --doctor` يتحقق
-منهما. الدليل الكامل: [desktop-app/README.md](desktop-app/README.md).</sub>
+<sub>يحتاج Node.js وأدوات Xcode لسطر الأوامر — `npx rtl-for-claude --doctor`
+يخبرك إن كان شيء ناقصًا. الدليل الكامل:
+[desktop-app/README.md](desktop-app/README.md).</sub>
 
 ## 🎛️ على ذوقك أنت
 
 اضغط أيقونة شريط الأدوات لتضبط حساسية الاكتشاف، والخط (المرفق أو خط مثبّت على جهازك)، وحجم النص، وتباعد الأسطر، وزر الاتجاه العائم، ولغة النافذة، والمواقع التي تشتغل عليها — بما فيها مواقعك أنت.
 
+## ❓ أسئلة شائعة
+
+**تحدّث Claude وعاد الخلل من جديد. ماذا الآن؟**
+إضافة المتصفح لا تتأثر بالتحديثات أصلًا، وإضافة VS Code تعيد تطبيق نفسها — على المحادثتين إن فعّلت تغطية Codex. وحدها الترقيعات اليدوية — تطبيق سطح المكتب، والمحادثات إن رقّعتها دون الإضافة — تحتاج تشغيل الأمر نفسه مرة أخرى.
+
+**ما الذي يلمسه بالضبط؟**
+لا شيء من الملفات الأصلية. تطبيق سطح المكتب يُرقَّع كنسخة منفصلة (Claude-RTL)، وترقيعات VS Code تأخذ نسخة احتياطية (`*.rtl-backup`) من كل ملف قبل تغييره. وكل شيء يجري دون اتصال، على جهازك أنت.
+
+**و Windows أو Linux؟**
+إضافة المتصفح وإضافة VS Code تعملان في كل مكان؛ وترقيع تطبيق سطح المكتب لـ macOS فقط حاليًا.
+
+**كيف أتراجع عن كل شيء؟**
+شغّل `npx rtl-for-claude` واختر الإزالة، أو مرّر `--remove` لأي من السكربتات؛ والإضافات تُزال كأي إضافة أخرى.
+
 ## 🔒 الخصوصية
 
 محليّة 100%؛ لا خوادم، ولا تتبّع، ولا يغادر متصفّحك أي شيء.
 
-## ❤️ شكر وتقدير
+## ⭐ إن أفادك
 
-تعتمد على خط [Vazirmatn](https://github.com/rastikerdar/vazirmatn) مفتوح المصدر، من تصميم Saber Rastikerdar (رخصة SIL OFL). والكود تحت [رخصة MIT](LICENSE).
+امنح المشروع نجمة ليصل إلى غيرك. وجدت مشكلة؟ [افتح Issue](https://github.com/mahdigh99/rtl-for-claude/issues).
+
+## ❤️ في ذكرى صابر
+
+خط المشروع هو [Vazirmatn](https://github.com/rastikerdar/vazirmatn) — في ذكرى الراحل صابر راستي‌كردار، الذي ترك خطوطه حرة للجميع. والكود تحت [رخصة MIT](LICENSE).
 
 </div>
 

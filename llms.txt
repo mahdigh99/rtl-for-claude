@@ -68,7 +68,10 @@ Per surface:
 - VS Code: install "RTL for Claude" from the Marketplace / Open VSX, then run
   **Developer: Reload Window**. Script alternative: `bash
   vscode-extension/apply-rtl.sh` (`apply-rtl.ps1` on Windows).
-- Codex: `bash vscode-extension-codex/apply-rtl.sh`, then reload the window.
+- Codex: the VS Code extension covers it when `rtlForClaude.codex.enabled` is
+  on (offered once, automatically, when Codex is installed — re-applies after
+  Codex updates), or `bash vscode-extension-codex/apply-rtl.sh`, then reload
+  the window.
 - Claude Desktop (macOS): `npx rtl-for-claude --desktop` (or, from a checkout,
   `bash desktop-app/apply-rtl.sh --install`), then launch
   `~/Applications/Claude-RTL.app`. Re-run it after every Claude update. Needs
