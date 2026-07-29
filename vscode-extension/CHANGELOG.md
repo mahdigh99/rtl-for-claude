@@ -3,7 +3,7 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.4.0] — 2026-07-29
 
 ### Added
 - **Codex support, opt-in.** One setting — `rtlForClaude.codex.enabled` — also

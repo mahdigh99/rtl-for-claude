@@ -3,7 +3,7 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension + Claude Desktop patcher).
 This project follows [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.4.0] — 2026-07-29
 
 ### Added
 
