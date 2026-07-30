@@ -2,7 +2,7 @@
   "name": "rtl-for-claude",
   "displayName": "RTL for Claude",
   "description": "Right-to-left text + the Vazirmatn font in the Claude Code chat — and, if you opt in, the Codex chat too. For Persian, Arabic, Urdu and every RTL language. Auto-applies and survives updates.",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "publisher": "mahdigh99",
   "author": "Mahdi Ghorbanian",
   "license": "MIT",
