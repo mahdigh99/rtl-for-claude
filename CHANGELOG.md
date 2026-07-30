@@ -3,6 +3,16 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension + Claude Desktop patcher).
 This project follows [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Changed
+
+- **The desktop installer now says it out loud: the patch is a second app.**
+  After installing, it tells you that **Claude-RTL** is a separate app, that
+  it is *not* next to the original (it lives in `~/Applications`, the
+  Applications folder inside your home), that Spotlight finds it — and offers
+  to open it for you right away. The docs say the same thing just as clearly.
+
 ## [1.4.1] — 2026-07-30
 
 ### Fixed
