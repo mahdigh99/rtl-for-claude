@@ -5,9 +5,11 @@ macOS: automatic per-paragraph direction, LTR code blocks, math that doesn't
 mirror, and a floating **Auto / RTL / LTR** button (also `Cmd + Shift + 9`)
 that remembers your choice.
 
-> **Your Claude.app is never modified.** The installer builds a *separate
-> patched copy* at `~/Applications/Claude-RTL.app` and touches only that copy.
-> Uninstalling is deleting it.
+> **The install creates a SECOND app — your Claude.app is never modified.**
+> The patch lives in a *separate copy* named **Claude-RTL**, and it is **not
+> next to the original**: it goes into the Applications folder inside your
+> home (`~/Applications`). The easiest way to find it is Spotlight — type
+> `Claude-RTL`. Uninstalling is deleting that copy.
 
 ## Install — the short way
 
@@ -19,7 +21,8 @@ npx rtl-for-claude
 
 A menu appears; choose **Claude Desktop app**. It checks the requirements,
 tells you exactly what it will do, and asks before changing anything. When it
-finishes, open **Claude-RTL** from your `~/Applications` folder (or Spotlight).
+finishes it offers to open the new app for you — and from then on, the app
+you open is **Claude-RTL** (Spotlight finds it), not the original Claude.
 Your Persian, Arabic and Urdu chats now read right-to-left.
 
 The first launch shows a macOS prompt or two (notifications, and possibly a

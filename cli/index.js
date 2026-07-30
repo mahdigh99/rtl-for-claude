@@ -43,9 +43,10 @@ const TARGETS = {
     title: "Claude Desktop app (macOS)",
     script: "desktop-app/apply-rtl.sh",
     what:
-      "Builds a patched COPY of Claude at ~/Applications/Claude-RTL.app.\n" +
-      "Your existing Claude.app is never modified — it keeps working, and\n" +
-      "removing the copy is the complete uninstall.",
+      "Builds a SECOND app — a patched copy of Claude — at\n" +
+      "~/Applications/Claude-RTL.app (your user Applications folder, NOT next\n" +
+      "to the original). Your existing Claude.app is never modified — it keeps\n" +
+      "working, and deleting the copy is the complete uninstall.",
     undo: "npx rtl-for-claude --desktop --remove",
   },
   "claude-code": {
@@ -221,11 +222,39 @@ async function doAction(target, opts) {
   say();
   if (code === 0 && !opts.remove) {
     say();
-    if (target === "desktop") ok("Open " + c.bold("Claude-RTL") + " from your Applications folder.");
-    else ok("Run " + c.bold("Developer: Reload Window") + " in the editor to see it.");
-    say(c.dim("  Undo:  " + TARGETS[target].undo));
+    if (target === "desktop") {
+      ok("Done — the patch is a " + c.bold("second app") + " named " + c.bold("Claude-RTL") + ".");
+      say("    " + c.dim("Your original Claude is untouched. The new app is NOT next to it —"));
+      say("    " + c.dim("it lives in ~/Applications (inside your home). Spotlight: “Claude-RTL”."));
+      say(c.dim("  Undo:  " + TARGETS[target].undo));
+      await offerOpenDesktop();
+    } else {
+      ok("Run " + c.bold("Developer: Reload Window") + " in the editor to see it.");
+      say(c.dim("  Undo:  " + TARGETS[target].undo));
+    }
   }
   return code;
+}
+
+// After a desktop install, offer to launch the new app right away — people
+// look for it next to the original Claude.app, and it simply is not there.
+async function offerOpenDesktop() {
+  if (process.platform !== "darwin" || !process.stdin.isTTY) return;
+  const app =
+    process.env.RTLX_PATCHED_APP || path.join(os.homedir(), "Applications", "Claude-RTL.app");
+  try {
+    if (!fs.existsSync(app)) return;
+  } catch (e) {
+    return;
+  }
+  say();
+  const answer = await ui.question("  " + c.bold("Open Claude-RTL now?") + c.dim(" [Y/n] "));
+  if (answer === "" || answer === "y" || answer === "yes") {
+    try {
+      spawn("open", [app], { stdio: "ignore", detached: true }).unref();
+      ok("Claude-RTL is opening.");
+    } catch (e) {}
+  }
 }
 
 async function showStatus() {

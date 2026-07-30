@@ -129,9 +129,12 @@ bash vscode-extension-codex/apply-rtl.sh
 bash desktop-app/apply-rtl.sh --install
 ```
 
-لا يمسّ تطبيق Claude.app الأصلي أبدًا؛ بل يبني نسخة مُرقَّعة منفصلة في
-`~/Applications/Claude-RTL.app`، وهي التي تفتحها من الآن فصاعدًا. أعد تنفيذه
-بعد كل تحديث لـ Claude Desktop؛ و`--remove` يحذف النسخة.
+**نتيجة التثبيت تطبيق ثانٍ اسمه Claude-RTL** — تطبيق Claude الأصلي لا يُمَسّ
+ويبقى يعمل كما هو. التطبيق الجديد ليس بجوار الأصلي: يذهب إلى مجلد
+Applications داخل مجلد المنزل (`~/Applications`)، وأسهل طريقة للعثور عليه هي
+Spotlight — اكتب **Claude-RTL**. افتح هذا من الآن فصاعدًا. أعد تشغيل المُرقِّع
+بعد كل تحديث لـ Claude Desktop؛ و`--remove` يحذف التطبيق الثاني ويعود كل شيء
+كما كان.
 
 <sub>يحتاج Node.js وأدوات Xcode لسطر الأوامر — `npx rtl-for-claude --doctor`
 يخبرك إن كان شيء ناقصًا. الدليل الكامل:

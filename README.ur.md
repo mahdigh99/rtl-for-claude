@@ -131,9 +131,13 @@ bash vscode-extension-codex/apply-rtl.sh
 bash desktop-app/apply-rtl.sh --install
 ```
 
-یہ آپ کی اصل Claude.app کو ہاتھ نہیں لگاتا؛ `~/Applications/Claude-RTL.app`
-پر ایک الگ پیچ شدہ کاپی بناتا ہے، اور آئندہ آپ وہی کھولیں گے۔ Claude Desktop
-کی ہر اپڈیٹ کے بعد دوبارہ چلائیں؛ `--remove` کاپی حذف کر دیتا ہے۔
+**انسٹال کا نتیجہ ایک دوسری ایپ ہے جس کا نام Claude-RTL ہے** — آپ کی اصل
+Claude کو ہاتھ نہیں لگتا اور وہ پہلے کی طرح چلتی رہتی ہے۔ نئی ایپ اصل کے
+برابر میں نہیں ہوتی: یہ آپ کے ہوم کے اندر والے Applications فولڈر
+(`~/Applications`) میں جاتی ہے، اور اسے ڈھونڈنے کا آسان ترین طریقہ Spotlight
+ہے — لکھیں **Claude-RTL**۔ آئندہ وہی کھولیں۔ Claude Desktop کی ہر اپڈیٹ کے
+بعد پیچر دوبارہ چلائیں؛ `--remove` دوسری ایپ حذف کر دیتا ہے اور سب کچھ پہلے
+جیسا ہو جاتا ہے۔
 
 <sub>اس کے لیے Node.js اور Xcode Command Line Tools درکار ہیں —
 `npx rtl-for-claude --doctor` بتا دیتا ہے کہ کچھ کم تو نہیں۔ مکمل گائیڈ:

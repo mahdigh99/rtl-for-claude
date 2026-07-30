@@ -129,9 +129,12 @@ Download the repository, read the script if you like, then run it:
 bash desktop-app/apply-rtl.sh --install
 ```
 
-It never touches your original Claude.app: it builds a separate patched copy
-at `~/Applications/Claude-RTL.app`, and from then on that's the one you open.
-Re-run it after each Claude Desktop update; `--remove` deletes the copy.
+**The result is a second app named Claude-RTL** — your original Claude is
+untouched and keeps working. The new app is not next to the original: it goes
+into the Applications folder inside your home (`~/Applications`), and the
+easiest way to find it is Spotlight — type **Claude-RTL**. Open that one from
+now on. Re-run the patcher after each Claude Desktop update; `--remove`
+deletes the second app and everything is back the way it was.
 
 <sub>Needs Node.js and the Xcode Command Line Tools — `npx rtl-for-claude --doctor`
 tells you if anything is missing. Full guide:

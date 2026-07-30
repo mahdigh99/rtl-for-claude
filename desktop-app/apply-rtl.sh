@@ -387,9 +387,20 @@ install_patch() {
 
   echo
   ok "installed: $PATCHED_APP"
-  log "launch it from ~/Applications (shows as “Claude-RTL”). The original Claude.app is untouched."
+  ok "the patch is a SECOND app named “Claude-RTL” — your original Claude is untouched and still works."
+  log "it is NOT next to the original: it lives in the Applications folder inside your home (~/Applications)."
+  log "find it with Spotlight (type “Claude-RTL”), or: open \"$PATCHED_APP\""
   log "first launch may re-ask keychain/permissions once (signature changed — expected)."
   log "after every Claude Desktop update, re-run: $SELF_CMD"
+  # Offer to open it right away — people look for the app next to the original
+  # and it simply is not there. Only in a real interactive terminal: both ends
+  # must be a TTY, so the test suite (redirected stdout) and the npx wrapper
+  # (piped stdio; it makes its own offer) never trigger this.
+  if [ -t 0 ] && [ -t 1 ]; then
+    printf '  open Claude-RTL now? [Y/n] '
+    read -r reply || reply=""
+    case "$reply" in [nN]*) ;; *) open "$PATCHED_APP" ;; esac
+  fi
 }
 
 # --- remove --------------------------------------------------------------------
