@@ -8,7 +8,7 @@
 # correct header-string integrity hash, native files stay unpacked & intact,
 # data-URI font + extracted origins present, node --check, ad-hoc codesign),
 # idempotent re-install, --remove (original byte-for-byte untouched),
-# ambiguous-preload abort, zero-candidate abort.
+# ambiguous-preload abort, multi-preload new layout, zero-candidate abort.
 # ============================================================================
 set -euo pipefail
 
@@ -173,6 +173,34 @@ cmp -s "$appsrc/.vite/build/other.js" "$test_root/x5/.vite/build/other.js" \
 bash "$PATCHER" --remove >/dev/null
 printf 'const A="https://claude.ai";const B="https://preview.claude.ai";console.log(A,B);' > "$appsrc/.vite/build/mainView.js"
 printf 'console.log("worker");\n' > "$appsrc/.vite/build/other.js"
+
+# --- 5c. new layout (1.24012+): one preload per window → patch ALL of them --------
+# Three window preloads referencing claude.ai, a renderer chunk that merely
+# mentions it, and a local-only preload with no claude origin. Expected: the
+# three window preloads get the payload, everything else stays byte-identical.
+printf 'const {contextBridge}=require("electron/renderer");contextBridge;console.log("https://claude.ai");' > "$appsrc/.vite/build/mainView.js"
+printf 'const {webFrame}=require("electron/renderer");webFrame;console.log("main window https://claude.ai");' > "$appsrc/.vite/build/mainWindow.js"
+printf 'const {contextBridge}=require("electron/renderer");console.log("quick https://claude.ai");' > "$appsrc/.vite/build/quickWindow.js"
+printf 'var chunk="https://claude.ai/chat";console.log(chunk);' > "$appsrc/.vite/build/index.chunk-AAAA1111.js"
+printf 'const {contextBridge}=require("electron/renderer");console.log("local preview, no claude origin");' > "$appsrc/.vite/build/claudePagePreview.js"
+build_fixture
+bash "$PATCHER" --install >/dev/null || fail "multi-preload layout should install"
+rm -rf "$test_root/x6"; npx --yes @electron/asar extract "$PASAR" "$test_root/x6"
+for w in mainView mainWindow quickWindow; do
+  [ "$(grep -c 'RTL-PATCH (begin)' "$test_root/x6/.vite/build/$w.js")" -eq 1 ] \
+    || fail "window preload $w.js should carry exactly one marker block"
+done
+cmp -s "$appsrc/.vite/build/index.chunk-AAAA1111.js" "$test_root/x6/.vite/build/index.chunk-AAAA1111.js" \
+  || fail "a renderer chunk mentioning claude.ai must stay untouched"
+cmp -s "$appsrc/.vite/build/claudePagePreview.js" "$test_root/x6/.vite/build/claudePagePreview.js" \
+  || fail "a preload without a claude origin must stay untouched"
+cmp -s "$appsrc/.vite/build/index.pre.js" "$test_root/x6/.vite/build/index.pre.js" \
+  || fail "the main entry must never be touched"
+bash "$PATCHER" --remove >/dev/null
+rm -f "$appsrc/.vite/build/mainWindow.js" "$appsrc/.vite/build/quickWindow.js" \
+      "$appsrc/.vite/build/index.chunk-AAAA1111.js" "$appsrc/.vite/build/claudePagePreview.js"
+printf 'const A="https://claude.ai";const B="https://preview.claude.ai";console.log(A,B);' > "$appsrc/.vite/build/mainView.js"
+build_fixture
 
 # --- 6. zero candidates → abort ---------------------------------------------------
 printf 'console.log("plain preload");' > "$appsrc/.vite/build/mainView.js"

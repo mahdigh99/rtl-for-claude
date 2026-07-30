@@ -335,13 +335,13 @@ async function interactive() {
     else last = await doAction(choice, { yes: false, remove: false });
 
     // Let the user read what just happened before the menu paints over it.
+    // Single keypress: q/Esc quits right away, Enter/Space brings the menu.
     say();
-    await ui.question(c.dim("  Press Enter for the menu, or q to quit … ")).then((answer) => {
-      if (answer === "q") {
-        say();
-        process.exit(last || 0);
-      }
-    });
+    const quit = await ui.pause(c.dim("  Press Enter for the menu, or q to quit … "), { colors: c });
+    if (quit) {
+      say();
+      process.exit(last || 0);
+    }
     say();
   }
 }

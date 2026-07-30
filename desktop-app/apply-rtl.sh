@@ -15,7 +15,7 @@
 # What --install does (docs/desktop-patcher-guide.md is the spec):
 #   1. cp -R Claude.app → Claude-RTL.app (display name changed, CFBundleName
 #      kept — Electron's fuse lookup reads CFBundleName).
-#   2. asar extract; find the claude.ai PRELOAD by grepping .vite/build/*.js
+#   2. asar extract; find the claude.ai PRELOAD(S) by grepping .vite/build/*.js
 #      for "claude.ai" (no hardcoded name; the Electron MAIN entry from
 #      package.json "main" is excluded and never written to — injecting
 #      renderer code there means a silent black screen; ambiguity = abort).
@@ -198,85 +198,105 @@ install_patch() {
   [ -n "$main_entry" ] || die 'could not read "main" from the asar package.json — aborting (black-screen guard).'
   main_base="$(basename "$main_entry")"
 
-  # 3b. Locate the claude.ai PRELOAD by content, not by name. Exactly one
-  # candidate must survive — zero or several means the app changed and
-  # guessing could inject into the wrong process (die, don't guess).
-  #
-  # Three filters, in order:
-  #   • the Electron main entry (3a)                    — renderer code there
+  # 3b. Locate the claude.ai PRELOAD(S) by content, not by name. Older builds
+  # ship exactly one; newer builds (≥ ~1.24012.x) ship ONE PRELOAD PER WINDOW
+  # (mainView, mainWindow, quickWindow, buddy, aboutWindow, findInPage …), so
+  # "exactly one" is no longer an invariant. The rules, in order:
+  #   • the Electron main entry (3a) is never a target — renderer code there
   #     means no BrowserWindow at all (silent black screen);
-  #   • the Node MCP hosts / workers below — they have NO DOM, and injecting
-  #     into them broke MCP startup for the Windows patcher (its issue #14);
-  #     they are excluded by name so a future build that merely MENTIONS
-  #     claude.ai in a worker cannot spuriously block the install;
-  #   • when >1 file still matches, narrow to those that actually look like a
-  #     preload (contextBridge / webFrame / electron/renderer). Still not
-  #     exactly one ⇒ abort listing everything.
+  #   • the Node MCP hosts / workers below have NO DOM and are excluded by
+  #     name — injecting into them broke MCP startup for the Windows patcher
+  #     (its issue #14);
+  #   • exactly ONE file mentions claude.ai ⇒ that is the preload (the old
+  #     single-preload layout);
+  #   • several ⇒ patch EVERY one that actually looks like a preload
+  #     (contextBridge / webFrame / electron/renderer). That is safe by
+  #     construction: the payload gates itself on location origin at runtime,
+  #     so a window that never loads claude.ai (About, Find-in-page) carries a
+  #     dormant block and does nothing. Renderer chunks never carry the
+  #     preload signature and stay untouched.
+  #   • several but NONE with the preload signature ⇒ the layout is something
+  #     we have never seen — abort listing everything (die, don't guess).
   local skip_hosts=" directMcpHost.js nodeHost.js shellPathWorker.js transcriptSearchWorker.js "
-  local preload="" names="" count=0 pre_only="" pre_count=0 f base
+  local targets="" target_names="" target_count=0
+  local names="" count=0 sole="" pre_targets="" pre_names="" pre_count=0 f base
   for f in "$build_dir"/*.js; do
     [ -f "$f" ] || continue
     base="$(basename "$f")"
     [ "$base" = "$main_base" ] && continue
     case "$skip_hosts" in *" $base "*) log "skipping $base (Node host/worker, no DOM)"; continue ;; esac
     LC_ALL=C grep -q 'claude\.ai' "$f" || continue
-    preload="$f"; names="${names:+$names, }$base"; count=$((count + 1))
+    sole="$f"; names="${names:+$names, }$base"; count=$((count + 1))
     if LC_ALL=C grep -qE 'contextBridge|webFrame|electron/renderer' "$f"; then
-      pre_only="$f"; pre_count=$((pre_count + 1))
+      pre_targets="${pre_targets}${f}"$'\n'
+      pre_names="${pre_names:+$pre_names, }$base"
+      pre_count=$((pre_count + 1))
     fi
   done
   if [ "$count" -eq 0 ]; then
     die "no preload referencing claude.ai found in .vite/build/ (main entry $main_base excluded) — layout changed; aborting."
-  elif [ "$count" -gt 1 ]; then
-    if [ "$pre_count" -eq 1 ]; then
-      preload="$pre_only"
-      log "several files mention claude.ai ($names); only $(basename "$preload") is a preload"
-    else
-      warn "ambiguous preload candidates (excluding main entry $main_base): $names"
-      die "refusing to guess which file is the claude.ai preload — aborting."
-    fi
+  elif [ "$count" -eq 1 ]; then
+    targets="${sole}"$'\n'
+    target_names="$(basename "$sole")"
+    target_count=1
+  elif [ "$pre_count" -ge 1 ]; then
+    targets="$pre_targets"
+    target_names="$pre_names"
+    target_count="$pre_count"
+    log "several files mention claude.ai ($names); patching the $pre_count window preload(s): $pre_names"
+  else
+    warn "ambiguous preload candidates (excluding main entry $main_base): $names"
+    die "refusing to guess which file is the claude.ai preload — aborting."
   fi
-  ok "preload: $(basename "$preload")   (main entry excluded: $main_base)"
+  ok "preload target(s): $target_names   (main entry excluded: $main_base)"
 
-  # 4. Build the prelude: stylesheet (+ Vazirmatn as a base64 data: URI) and
-  # the app's own allowed-origin list, both baked in at patch time.
+  # 4. Build the shared payload pieces once: the stylesheet with Vazirmatn as
+  # a base64 data: URI (a preload cannot fs-read a font). The allowed-origin
+  # list (B6) is PER preload and is extracted inside the loop below.
   log "building payload (CSS + data-URI font + origin list) …"
-  local font_b64 css_b64 origins origins_js=""
+  local font_b64 css_b64
   font_b64="$(base64 < "$FONT_SRC" | tr -d '\n')"
   css_b64="$( {
       printf "@font-face{font-family:'Vazirmatn RTLX';font-style:normal;font-weight:100 900;font-display:swap;src:url(data:font/woff2;base64,%s) format('woff2');}\n" "$font_b64"
       cat "$STYLES_SRC"
     } | base64 | tr -d '\n')"
-  # B6: extract the exact origins the bundle itself whitelists (paths can't
-  # match — '/' is excluded); the driver keeps a regex fallback if this is empty.
-  origins="$(LC_ALL=C grep -ohE 'https://[A-Za-z0-9.-]*claude\.(ai|com)' "$preload" 2>/dev/null | sort -u || true)"
-  while IFS= read -r o; do
-    [ -n "$o" ] || continue
-    origins_js="${origins_js:+$origins_js,}\"$o\""
-  done <<< "$origins"
-  {
-    printf ';globalThis.__RTLX_DESKTOP__ = {\n'
-    printf '  cssB64: "%s",\n' "$css_b64"
-    printf '  origins: [%s]\n' "$origins_js"
-    printf '};\n'
-  } > "$TMP_DIR/prelude.js"
 
-  # 5+6. Strip any previous block, then APPEND (never prepend — A4) the new one.
-  strip_patch "$preload"
-  local old_bytes; old_bytes=$(wc -c < "$preload")
-  if [ -s "$preload" ] && [ -n "$(tail -c1 "$preload")" ]; then printf '\n' >> "$preload"; fi
-  {
-    printf '%s\n' "$BEGIN_MARK"
-    cat "$TMP_DIR/prelude.js" "$MATH_SRC" "$ENGINE_SRC" "$DRIVER_SRC"
-    printf '%s\n' "$END_MARK"
-  } >> "$preload"
+  # 5–8. For each target: strip any previous block, APPEND the new one (never
+  # prepend — A4), then verify syntax (B7 — a syntax error here would brick
+  # app startup) and the grow-only size invariant (B8 — smaller means a torn
+  # write). Any failure aborts before the repack.
+  local preload origins origins_js old_bytes new_bytes o
+  while IFS= read -r preload; do
+    [ -n "$preload" ] || continue
+    # B6: the exact origins THIS bundle whitelists (paths can't match — '/'
+    # is excluded); the driver keeps a regex fallback if this is empty.
+    origins="$(LC_ALL=C grep -ohE 'https://[A-Za-z0-9.-]*claude\.(ai|com)' "$preload" 2>/dev/null | sort -u || true)"
+    origins_js=""
+    while IFS= read -r o; do
+      [ -n "$o" ] || continue
+      origins_js="${origins_js:+$origins_js,}\"$o\""
+    done <<< "$origins"
+    {
+      printf ';globalThis.__RTLX_DESKTOP__ = {\n'
+      printf '  cssB64: "%s",\n' "$css_b64"
+      printf '  origins: [%s]\n' "$origins_js"
+      printf '};\n'
+    } > "$TMP_DIR/prelude.js"
 
-  # 7 (B7): a syntax error here would brick app startup — verify, then
-  # 8 (B8): appending can only grow the file; smaller means a torn write.
-  node --check "$preload" || die "injected $(basename "$preload") fails node --check — aborting before repack."
-  local new_bytes; new_bytes=$(wc -c < "$preload")
-  [ "$new_bytes" -ge "$old_bytes" ] || die "patched preload ($new_bytes B) smaller than original ($old_bytes B) — torn write; aborting."
-  ok "payload appended ($(basename "$preload")): $old_bytes B → $new_bytes B, node --check passed"
+    strip_patch "$preload"
+    old_bytes=$(wc -c < "$preload")
+    if [ -s "$preload" ] && [ -n "$(tail -c1 "$preload")" ]; then printf '\n' >> "$preload"; fi
+    {
+      printf '%s\n' "$BEGIN_MARK"
+      cat "$TMP_DIR/prelude.js" "$MATH_SRC" "$ENGINE_SRC" "$DRIVER_SRC"
+      printf '%s\n' "$END_MARK"
+    } >> "$preload"
+
+    node --check "$preload" || die "injected $(basename "$preload") fails node --check — aborting before repack."
+    new_bytes=$(wc -c < "$preload")
+    [ "$new_bytes" -ge "$old_bytes" ] || die "patched $(basename "$preload") ($new_bytes B) smaller than original ($old_bytes B) — torn write; aborting."
+    ok "payload appended ($(basename "$preload")): $old_bytes B → $new_bytes B, node --check passed"
+  done <<< "$targets"
 
   # 9 (B3): repack WITH the native-module unpack glob; the existing
   # app.asar.unpacked/ directory is left untouched (same file set).
@@ -287,9 +307,15 @@ install_patch() {
   # its header must parse and its file list must match the original's exactly.
   # A silently dropped file (or a native module swallowed by a lost unpack
   # glob) shows up here as a diff instead of as a broken app at launch.
-  asar_cmd list "$TMP_DIR/app.asar.new" > "$TMP_DIR/list.new" 2>/dev/null \
+  # Compare the entry lists SORTED: `asar list` prints header insertion order,
+  # and Anthropic's builder collates upper/lower-case chunk names differently
+  # than a repack does. The invariant is the SET of entries — Electron looks
+  # files up by path, never by position — so order must not fail the guard.
+  asar_cmd list "$TMP_DIR/app.asar.new" > "$TMP_DIR/list.new.raw" 2>/dev/null \
     || die "the repacked app.asar does not parse — aborting before it replaces the good one."
-  asar_cmd list "$st_asar" > "$TMP_DIR/list.old" 2>/dev/null || true
+  sort "$TMP_DIR/list.new.raw" > "$TMP_DIR/list.new"
+  asar_cmd list "$st_asar" > "$TMP_DIR/list.old.raw" 2>/dev/null || true
+  sort "$TMP_DIR/list.old.raw" > "$TMP_DIR/list.old" 2>/dev/null || true
   if [ -s "$TMP_DIR/list.old" ] && ! diff -q "$TMP_DIR/list.old" "$TMP_DIR/list.new" >/dev/null; then
     warn "file list differs between the original and the repacked asar:"
     diff "$TMP_DIR/list.old" "$TMP_DIR/list.new" | head -20 | while IFS= read -r l; do warn "  $l"; done

@@ -249,6 +249,42 @@ async function drive(keys, items) {
   ok((await pending) === "two", "without raw mode it falls back to a numbered prompt");
   ok(/1\) First/.test(text), "…and prints the numbers");
 
+  // The between-actions pause promises "q to quit" — so q must work as a
+  // SINGLE keypress, no Enter needed (it used to be a readline question that
+  // only listened for Enter, leaving people hammering q at a dead prompt).
+  {
+    const { input, output } = fakeTty();
+    const p = ui.pause("Press Enter for the menu, or q to quit … ", { input, output });
+    await tick();
+    input.write("q");
+    ok((await p) === true, "pause: a single q (no Enter) quits");
+  }
+  {
+    const { input, output } = fakeTty();
+    const p = ui.pause("pause ", { input, output });
+    await tick();
+    input.write("x");
+    await tick(); // an irrelevant key must keep it waiting, not resolve it
+    input.write("\r");
+    ok((await p) === false, "pause: Enter continues (other keys are ignored)");
+  }
+  {
+    const { input, output } = fakeTty();
+    const p = ui.pause("pause ", { input, output });
+    await tick();
+    input.write("\x1b");
+    ok((await p) === true, "pause: Esc quits too");
+  }
+  {
+    // No raw mode (a pipe): line-prompt fallback; an answer starting with q quits.
+    const input = new PassThrough();
+    const output = new PassThrough();
+    const p = ui.pause("pause: ", { input, output });
+    await tick();
+    input.write("qqq\n");
+    ok((await p) === true, "pause fallback: a line starting with q quits");
+  }
+
   // Output styling: the shell scripts keep their own plain vocabulary, and the
   // CLI re-renders it. Anything unrecognised must survive, not be swallowed.
   const plain = ui.makeColors({ isTTY: false });

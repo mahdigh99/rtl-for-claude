@@ -51,8 +51,11 @@
     showToggles: true,
     forceAll: null, // hydrated from localStorage below
     // Same content confinement as the browser extension on claude.ai: a <div>
-    // only flips INSIDE a message, never in the app chrome.
-    contentSelector: '.font-claude-message, [data-testid="user-message"]',
+    // only flips INSIDE a message, never in the app chrome. claude.ai renamed
+    // its answer container (.font-claude-message → .font-claude-response), so
+    // match ANY font-claude-* class — the next rename must not silently strip
+    // Claude's replies of their direction and font again.
+    contentSelector: '[class*="font-claude"], [data-testid="user-message"]',
   };
 
   // --- persisted whole-chat pin (localStorage; survives app restarts) -------

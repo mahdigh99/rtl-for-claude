@@ -185,7 +185,10 @@
   // settings.contentSelector so a <div> only flips INSIDE content (never the
   // app chrome). Unknown sites → null → prose-tags-only (always chrome-safe).
   const SITE_SELECTORS = {
-    "claude.ai": '.font-claude-message, [data-testid="user-message"]',
+    // claude.ai renamed its answer container (.font-claude-message →
+    // .font-claude-response); match ANY font-claude-* class so a rename never
+    // silently strips Claude's replies of their direction and font again.
+    "claude.ai": '[class*="font-claude"], [data-testid="user-message"]',
     "chatgpt.com": "[data-message-author-role]",
     "chat.openai.com": "[data-message-author-role]",
     "gemini.google.com": "message-content, .query-content",

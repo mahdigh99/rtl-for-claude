@@ -200,6 +200,46 @@ async function confirm(prompt, input, output) {
   return answer === "y" || answer === "yes";
 }
 
+/**
+ * Single-keypress pause: resolves false on Enter/Space (continue), true on
+ * q/Esc (quit). The prompt promises "or q to quit", so q must work WITHOUT
+ * Enter — a readline question here left people hammering q at a prompt that
+ * only listened for Enter. Falls back to a line prompt when raw mode isn't
+ * available; there, any answer starting with "q" quits.
+ */
+function pause(prompt, opts) {
+  opts = opts || {};
+  const input = opts.input || process.stdin;
+  const output = opts.output || process.stdout;
+  if (!canPrompt(input)) {
+    return question(prompt, input, output).then((a) => a.charAt(0) === "q");
+  }
+  return new Promise((resolve) => {
+    output.write(prompt);
+    const done = (quit) => {
+      input.removeListener("keypress", onKey);
+      if (input.isTTY) input.setRawMode(false);
+      input.pause();
+      output.write("\n");
+      resolve(quit);
+    };
+    const onKey = (str, key) => {
+      key = key || {};
+      if (key.ctrl && key.name === "c") {
+        output.write(CURSOR_SHOW + "\n");
+        process.exit(130);
+      }
+      if (key.name === "q" || key.name === "escape") return done(true);
+      if (key.name === "return" || key.name === "enter" || key.name === "space") return done(false);
+      // anything else: keep waiting — this is a two-answer question
+    };
+    readline.emitKeypressEvents(input);
+    input.setRawMode(true);
+    input.resume();
+    input.on("keypress", onKey);
+  });
+}
+
 // --- framing the output of the shell scripts ---------------------------------
 
 /**
@@ -268,6 +308,6 @@ function styleStream(readable, output, c, onDone) {
 }
 
 module.exports = {
-  makeColors, box, select, question, confirm, canPrompt, stripAnsi, width,
+  makeColors, box, select, question, confirm, pause, canPrompt, stripAnsi, width,
   section, styleLine, styleStream,
 };

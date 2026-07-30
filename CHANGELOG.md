@@ -3,6 +3,21 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension + Claude Desktop patcher).
 This project follows [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Fixed
+
+- **The Claude Desktop patcher works with current Claude versions again.**
+  Newer builds ship one preload file per window; the patcher now covers all of
+  them (RTL still activates only on the real claude.ai page) instead of
+  stopping with "ambiguous preload candidates".
+- **Claude's replies get RTL and the Vazirmatn font again.** claude.ai renamed
+  its reply container, which left answers unstyled while your own bubbles
+  looked right. Fixed in both the desktop patch and the browser extension,
+  with a selector that survives the next rename too.
+- **In the installer, `q` now quits immediately** at the "Press Enter for the
+  menu, or q to quit" pause — no Enter needed, as the prompt always promised.
+
 ## [1.4.0] — 2026-07-29
 
 ### Added

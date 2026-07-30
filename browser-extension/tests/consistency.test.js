@@ -142,6 +142,22 @@ ok(pollIdx !== -1, "codex still has the interval as a fallback");
 ok(/catch \(error\) \{\s*reportError\(error\);\s*setInterval\(sweep, 2000\);/.test(codex),
   "the codex poll only arms when the MutationObserver failed to attach");
 
+// --- the claude.ai content selector is one string on every surface ----------
+// claude.ai renamed .font-claude-message → .font-claude-response (seen live in
+// Claude Desktop 1.24012.9); both surfaces must match ANY font-claude-* class,
+// and the browser and desktop copies must never drift apart again.
+{
+  const CLAUDE_SEL = '[class*="font-claude"], [data-testid="user-message"]';
+  const contentSrc = read("browser-extension/src/content.js");
+  const desktopSrc = read("desktop-app/assets/driver.js");
+  ok(contentSrc.indexOf("'" + CLAUDE_SEL + "'") !== -1,
+    "content.js claude.ai selector matches any font-claude-* class");
+  ok(desktopSrc.indexOf("contentSelector: '" + CLAUDE_SEL + "'") !== -1,
+    "the desktop driver uses the exact same claude.ai selector");
+  ok(contentSrc.indexOf("font-claude-message',") === -1 && desktopSrc.indexOf("font-claude-message',") === -1,
+    "no surface pins the old .font-claude-message-only selector");
+}
+
 if (failed) {
   console.error("\nFAIL: " + failed + "/" + total + " consistency check(s) regressed");
   process.exit(1);
