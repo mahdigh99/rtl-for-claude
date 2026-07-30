@@ -1,6 +1,6 @@
 {
   "name": "rtl-for-claude",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Right-to-left text (Persian, Arabic, Urdu, Hebrew …) and the Vazirmatn font in the Claude Desktop app and the Claude Code / Codex chats. One command, 100% local, fully reversible.",
   "keywords": [
     "rtl",

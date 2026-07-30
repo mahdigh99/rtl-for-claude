@@ -3,7 +3,7 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.4.1] — 2026-07-30
 
 Nothing changed in the extension itself — the version moves in lockstep with
 the project's patch release for the Claude Desktop patcher and the installer.
