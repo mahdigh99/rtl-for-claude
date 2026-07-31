@@ -59,6 +59,18 @@
         "https://chat.openai.com/*",
         "https://gemini.google.com/*"
       ],
+      "js": ["src/dom-guard.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://claude.ai/*",
+        "https://*.claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*"
+      ],
       "js": ["src/rtl-math.js", "src/rtl-engine.js", "src/content.js"],
       "css": ["src/styles.css"],
       "run_at": "document_idle"

@@ -12,6 +12,29 @@
   if (window.__rtlDriver) return;
   window.__rtlDriver = true;
 
+  // --- React-crash guard ------------------------------------------------------
+  // We wrap text nodes (math islands) and insert buttons inside a React-owned
+  // tree; when React later reconciles a node we moved, removeChild/insertBefore
+  // throw and the whole webview dies ("Something went wrong … Failed to execute
+  // 'removeChild' on 'Node'"). Same crash Google Translate causes on React
+  // apps; same well-known cure — soften exactly those two calls. This driver
+  // runs in the webview's own (main) world, so patching here reaches React.
+  try {
+    if (!window.__rtlxDomGuard && typeof Node === "function" && Node.prototype) {
+      window.__rtlxDomGuard = true;
+      var __rtlxRemove = Node.prototype.removeChild;
+      Node.prototype.removeChild = function (child) {
+        if (child && child.parentNode !== this) return child;
+        return __rtlxRemove.apply(this, arguments);
+      };
+      var __rtlxInsert = Node.prototype.insertBefore;
+      Node.prototype.insertBefore = function (node, ref) {
+        if (ref && ref.parentNode !== this) return this.appendChild(node);
+        return __rtlxInsert.apply(this, arguments);
+      };
+    }
+  } catch (e) {}
+
   var S = Object.assign(
     {
       enabled: true,

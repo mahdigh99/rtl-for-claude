@@ -3,6 +3,15 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Fixed
+- **The chat no longer crashes with "Something went wrong … removeChild"** on
+  long or math-heavy answers. The webview's renderer could trip over a text
+  node the extension had wrapped to keep math reading left-to-right; the
+  standard protection for exactly this crash is now installed before the chat
+  renders (Codex chat included).
+
 ## [1.4.2] — 2026-07-30
 
 Nothing changed in the extension itself — the version moves in lockstep with

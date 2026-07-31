@@ -251,11 +251,25 @@
         persistAcrossSessions: true,
       }]);
     } catch (e) { /* already registered or unsupported — the row's Allow button retries */ }
+    // The React-crash guard must run in the page's MAIN world (same file the
+    // manifest injects statically for the built-in sites). Registered as its
+    // own script so a browser without `world` support still gets the site.
+    try {
+      await api.scripting.registerContentScripts([{
+        id: scriptIdFor(h) + "-guard",
+        matches: originsFor(h),
+        js: ["src/dom-guard.js"],
+        runAt: "document_start",
+        world: "MAIN",
+        persistAcrossSessions: true,
+      }]);
+    } catch (e) {}
   }
 
   async function unregisterSite(h) {
     if (!api.scripting) return;
     try { await api.scripting.unregisterContentScripts({ ids: [scriptIdFor(h)] }); } catch (e) {}
+    try { await api.scripting.unregisterContentScripts({ ids: [scriptIdFor(h) + "-guard"] }); } catch (e) {}
   }
 
   async function revokeSite(h) {

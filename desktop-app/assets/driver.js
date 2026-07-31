@@ -37,6 +37,41 @@
   } catch (e) {}
   if (!allowed) return;
 
+  // --- React-crash guard ------------------------------------------------------
+  // Our math islands wrap text nodes inside claude.ai's React tree; when React
+  // later reconciles a node we moved, removeChild/insertBefore throw and the
+  // page dies ("Something went wrong … removeChild"). The guard must live in
+  // the PAGE's world — this preload runs isolated — and webFrame.executeJavaScript
+  // gets it there (available in sandboxed preloads). Also installed locally as
+  // a fallback for builds without context isolation.
+  function rtlxDomGuard(w) {
+    try {
+      if (w.__rtlxDomGuard) return;
+      if (typeof w.Node !== "function" || !w.Node.prototype) return;
+      w.__rtlxDomGuard = true;
+      var rm = w.Node.prototype.removeChild;
+      w.Node.prototype.removeChild = function (child) {
+        if (child && child.parentNode !== this) return child;
+        return rm.apply(this, arguments);
+      };
+      var ib = w.Node.prototype.insertBefore;
+      w.Node.prototype.insertBefore = function (node, ref) {
+        if (ref && ref.parentNode !== this) return this.appendChild(node);
+        return ib.apply(this, arguments);
+      };
+    } catch (e) {}
+  }
+  try {
+    if (typeof require === "function") {
+      var __wf = require("electron").webFrame;
+      if (__wf && typeof __wf.executeJavaScript === "function") {
+        var __gp = __wf.executeJavaScript("(" + rtlxDomGuard.toString() + ")(window);");
+        if (__gp && __gp.catch) __gp.catch(function () {});
+      }
+    }
+  } catch (e) {}
+  rtlxDomGuard(window);
+
   // --- fixed settings (the browser extension's defaults for claude.ai) ------
   var settings = {
     enabled: true,

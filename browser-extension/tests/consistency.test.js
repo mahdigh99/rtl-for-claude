@@ -158,6 +158,31 @@ ok(/catch \(error\) \{\s*reportError\(error\);\s*setInterval\(sweep, 2000\);/.te
     "no surface pins the old .font-claude-message-only selector");
 }
 
+// --- the React-crash DOM guard is installed on every surface ----------------
+// Math islands wrap text nodes inside React-owned trees; without the guard,
+// React's next reconcile of a moved node throws and kills the whole app
+// ("Something went wrong … removeChild"). Every injected surface must carry it.
+{
+  for (const f of [
+    "browser-extension/src/dom-guard.js",
+    "vscode-extension/assets/driver.js",
+    "vscode-extension-codex/assets/driver.js",
+    "desktop-app/assets/driver.js",
+  ])
+    ok(read(f).includes("__rtlxDomGuard"), f + " carries the DOM guard");
+  const manifest = json("browser-extension/manifest.json");
+  const mainEntry = (manifest.content_scripts || []).find((cs) => cs.world === "MAIN");
+  ok(
+    mainEntry && mainEntry.js && mainEntry.js.indexOf("src/dom-guard.js") !== -1 &&
+      mainEntry.run_at === "document_start",
+    "manifest injects dom-guard.js into the page's MAIN world at document_start"
+  );
+  ok(read("browser-extension/src/popup.js").includes("dom-guard.js"),
+    "custom sites register the MAIN-world guard too");
+  ok(read("desktop-app/assets/driver.js").includes("executeJavaScript"),
+    "the desktop preload pushes the guard into the page's world via webFrame");
+}
+
 if (failed) {
   console.error("\nFAIL: " + failed + "/" + total + " consistency check(s) regressed");
   process.exit(1);

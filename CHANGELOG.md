@@ -3,6 +3,18 @@
 All notable changes to **RTL for Claude** (browser extension + VS Code extension + Claude Desktop patcher).
 This project follows [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+### Fixed
+
+- **No more "Something went wrong … removeChild" crashes.** On long or
+  math-heavy answers, the chat could crash and ask you to re-launch: the app's
+  own renderer tripped over a text node we had wrapped to keep math reading
+  left-to-right. Every surface — the Claude Code and Codex chats, the desktop
+  app and the browser extension — now installs the standard protection for
+  exactly this (the same crash Google Translate causes on such apps), so a
+  wrapped node can never take the chat down again.
+
 ## [1.4.2] — 2026-07-30
 
 ### Changed
