@@ -24,7 +24,12 @@
       window.__rtlxDomGuard = true;
       var __rtlxRemove = Node.prototype.removeChild;
       Node.prototype.removeChild = function (child) {
-        if (child && child.parentNode !== this) return child;
+        if (child && child.parentNode !== this) {
+          // Honour the caller's intent: the node must leave the screen, or it
+          // lingers as ghost text the app can never remove again.
+          if (child.parentNode) __rtlxRemove.call(child.parentNode, child);
+          return child;
+        }
         return __rtlxRemove.apply(this, arguments);
       };
       var __rtlxInsert = Node.prototype.insertBefore;
@@ -241,9 +246,14 @@
         var p = node.parentElement;
         if (!p) return NodeFilter.FILTER_REJECT;
         if (p.hasAttribute(ISLAND)) return NodeFilter.FILTER_REJECT;
+        // The composer is off-limits: React updates the mirror's text node IN
+        // PLACE on every keystroke, so wrapping it detaches the very node
+        // React keeps writing to — typed text turns invisible and stale text
+        // sticks to the screen.
         if (
           p.closest(
-            "pre, code, kbd, samp, [" + ISLAND + "], " +
+            "pre, code, kbd, samp, textarea, [" + ISLAND + "], " + INPUT + ", " +
+              '[class*="mentionMirror"], ' +
               '[contenteditable]:not([contenteditable="false"]), [role="textbox"]'
           )
         )

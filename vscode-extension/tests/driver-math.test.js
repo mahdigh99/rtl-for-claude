@@ -71,6 +71,12 @@ const claudePage = (withMath) => `<meta charset="utf-8">
   <tbody><tr><td>مقدار</td><td>Latin</td></tr></tbody>
 </table>
 
+<div dir="rtl">
+  <div class="inputContainer_c1">
+    <div class="mentionMirror_m1" id="mirror">${FA} 2 + 3 = 5 و $x^2$</div>
+  </div>
+</div>
+
 <pre id="result"></pre>
 ${withMath ? `<script src="file://${CLAUDE.math}"></script>` : ""}
 <script src="file://${CLAUDE.driver}"></script>
@@ -96,6 +102,12 @@ setTimeout(() => {
     const st = document.getElementById("standalone");
     t(st.getAttribute("data-rtlx-table") === "rtl", "standalone Persian table gets data-rtlx-table=rtl");
     t(getComputedStyle(st).direction === "rtl", "standalone table computes rtl");
+    // Regression: the composer mirror re-renders per keystroke — wrapping its
+    // text node detaches the node React writes to, and typed text goes
+    // invisible while stale text sticks to the screen.
+    const mirror = document.getElementById("mirror");
+    t(mirror.querySelectorAll("[data-rtlx-island]").length === 0, "composer mirror text is NEVER wrapped");
+    t(mirror.childNodes.length === 1 && mirror.childNodes[0].nodeType === 3, "mirror keeps its single React-owned text node");
   } else {
     t(document.querySelectorAll("[data-rtlx-island]").length === 0, "no islands without rtl-math.js");
     t(document.querySelector(".message_a1").hasAttribute("data-rtlx-seen"), "driver still marks SEEN without rtl-math.js");

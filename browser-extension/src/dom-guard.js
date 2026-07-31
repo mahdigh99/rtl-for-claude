@@ -21,7 +21,12 @@
     w.__rtlxDomGuard = true;
     var origRemove = w.Node.prototype.removeChild;
     w.Node.prototype.removeChild = function (child) {
-      if (child && child.parentNode !== this) return child;
+      if (child && child.parentNode !== this) {
+        // Honour the caller's intent: the node must leave the screen, or it
+        // lingers as ghost text the app can never remove again.
+        if (child.parentNode) origRemove.call(child.parentNode, child);
+        return child;
+      }
       return origRemove.apply(this, arguments);
     };
     var origInsert = w.Node.prototype.insertBefore;

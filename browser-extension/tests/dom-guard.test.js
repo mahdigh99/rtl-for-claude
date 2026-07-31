@@ -75,6 +75,22 @@ try {
 check(!threw && ret === stranger, "removeChild on a moved node returns it instead of throwing");
 check(parent.children.length === 2, "…and the parent's real children are untouched");
 
+// a node that MOVED to another parent still leaves the screen — the caller
+// asked for a removal; leaving it attached would render as ghost text
+const oldParent = new FakeNode();
+const newParent = new FakeNode();
+const mover = new FakeNode();
+newParent.appendChild(mover);
+threw = false;
+try {
+  ret = oldParent.removeChild(mover);
+} catch (e) {
+  threw = true;
+}
+check(!threw && ret === mover, "removeChild on a re-parented node returns it instead of throwing");
+check(newParent.children.length === 0 && mover.parentNode === null,
+  "…and the node is detached from its REAL parent (no ghost left behind)");
+
 const d = new FakeNode();
 threw = false;
 try {

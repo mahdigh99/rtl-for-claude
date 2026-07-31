@@ -28,7 +28,12 @@
       window.__rtlxDomGuard = true;
       var __rtlxRemove = Node.prototype.removeChild;
       Node.prototype.removeChild = function (child) {
-        if (child && child.parentNode !== this) return child;
+        if (child && child.parentNode !== this) {
+          // Honour the caller's intent: the node must leave the screen, or it
+          // lingers as ghost text the app can never remove again.
+          if (child.parentNode) __rtlxRemove.call(child.parentNode, child);
+          return child;
+        }
         return __rtlxRemove.apply(this, arguments);
       };
       var __rtlxInsert = Node.prototype.insertBefore;

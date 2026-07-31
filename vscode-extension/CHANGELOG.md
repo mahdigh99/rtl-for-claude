@@ -3,6 +3,18 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
+## [1.4.4] — 2026-07-31
+
+### Fixed
+
+- **Typed text could go invisible in the input box.** With the chat pinned
+  RTL, a draft containing `$` or digits around an operator could get its
+  display layer wrapped by the math isolation — after that, new keystrokes
+  stopped showing while the old draft and the placeholder stuck to the screen
+  on top of each other. The input box is now completely off-limits to math
+  isolation, and the 1.4.3 crash guard now really removes a node the app
+  asked to remove instead of leaving it behind as ghost text.
+
 ## [1.4.3] — 2026-07-30
 
 ### Fixed
