@@ -3,7 +3,7 @@
 All notable changes to **RTL for Claude** are documented here.
 This project follows [Semantic Versioning](https://semver.org).
 
-## [Unreleased]
+## [1.4.3] — 2026-07-30
 
 ### Fixed
 - **The chat no longer crashes with "Something went wrong … removeChild"** on
